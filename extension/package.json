@@ -1,0 +1,12 @@
+{
+  "name": "promptshield-extension",
+  "version": "1.0.0",
+  "description": "PromptShield Chrome Extension",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Extension runs directly in Chrome - no build step needed'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.8"
+  }
+}

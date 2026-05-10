@@ -1,0 +1,78 @@
+{
+    "manifest_version": 3,
+    "name": "PromptShield",
+    "version": "1.0.0",
+    "description": "AI-native data loss prevention. Intercepts, detects, and masks sensitive data before it reaches any AI tool.",
+    "permissions": [
+        "storage",
+        "clipboardRead",
+        "clipboardWrite",
+        "webRequest",
+        "tabs",
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://chat.openai.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://copilot.microsoft.com/*",
+        "https://*.anthropic.com/*",
+        "https://*.openai.com/*",
+        "https://*.google.com/*",
+        "https://*.supabase.co/*",
+        "https://api.anthropic.com/*"
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://chat.openai.com/*",
+                "https://claude.ai/*",
+                "https://gemini.google.com/*",
+                "https://copilot.microsoft.com/*",
+                "<all_urls>"
+            ],
+            "js": [
+                "content-script-loader.js"
+            ],
+            "run_at": "document_start"
+        }
+    ],
+    "action": {
+        "default_popup": "popup/popup.html",
+        "default_title": "PromptShield",
+        "default_icons": {
+            "16": "icons/icon-16.png",
+            "48": "icons/icon-48.png",
+            "128": "icons/icon-128.png"
+        }
+    },
+    "icons": {
+        "16": "icons/icon-16.png",
+        "48": "icons/icon-48.png",
+        "128": "icons/icon-128.png"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "overlay/overlay.html",
+                "content-script.js",
+                "src/detection/engine.js",
+                "src/detection/patterns.js",
+                "src/utils/audit.js",
+                "src/utils/tokenMap.js",
+                "src/rules/engine.js",
+                "src/modes/shadow.js",
+                "src/modes/fix.js",
+                "src/modes/warn.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
+}

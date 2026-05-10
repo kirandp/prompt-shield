@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptShield</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="popup-container">
+        <!-- Header -->
+        <div class="popup-header">
+            <div class="logo-section">
+                <div class="logo">🛡️</div>
+                <span class="title">PromptShield</span>
+            </div>
+            <span id="statusBadge" class="status-badge status-protected">Protected</span>
+        </div>
+
+        <!-- Mode Selector -->
+        <div class="section">
+            <h3 class="section-title">Protection Mode</h3>
+            <div class="mode-selector">
+                <button class="mode-btn" id="modeShadow" data-mode="shadow">
+                    <i class="icon">👁️</i>
+                    <span>Shadow</span>
+                    <small>Silent logging</small>
+                </button>
+                <button class="mode-btn" id="modeFix" data-mode="fix">
+                    <i class="icon">✓</i>
+                    <span>Fix</span>
+                    <small>Auto-mask</small>
+                </button>
+                <button class="mode-btn active" id="modeWarn" data-mode="warn">
+                    <i class="icon">⚠️</i>
+                    <span>Warn</span>
+                    <small>Alert user</small>
+                </button>
+            </div>
+        </div>
+
+        <!-- Policy Selector -->
+        <div class="section">
+            <h3 class="section-title">Policy</h3>
+            <select id="policySelect" class="policy-select">
+                <option value="hipaa">HIPAA (Healthcare)</option>
+                <option value="gdpr">GDPR (EU Privacy)</option>
+                <option value="pci">PCI-DSS (Payments)</option>
+                <option value="strict">Strict (All Categories)</option>
+            </select>
+        </div>
+
+        <!-- Today's Activity -->
+        <div class="section">
+            <h3 class="section-title">Today's Activity</h3>
+            <div class="activity-grid">
+                <div class="activity-card">
+                    <div class="activity-number">14</div>
+                    <div class="activity-label">PHI</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-number">23</div>
+                    <div class="activity-label">PII</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-number">5</div>
+                    <div class="activity-label">Secrets</div>
+                </div>
+                <div class="activity-card">
+                    <div class="activity-number">41</div>
+                    <div class="activity-label">Masked</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Bar -->
+        <div class="info-bar">
+            <i class="icon">🔒</i>
+            <span>3 custom rules active · 9 items masked this session</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button id="dashboardBtn" class="btn btn-secondary">
+                <i>🔗</i> Dashboard
+            </button>
+            <button id="pauseBtn" class="btn btn-icon">
+                <i>⏸</i> Pause
+            </button>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
