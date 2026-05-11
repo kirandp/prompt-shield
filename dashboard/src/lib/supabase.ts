@@ -41,8 +41,9 @@ export async function getDemoOrgId(): Promise<string | null> {
         .select('id')
         .eq('domain', 'demo.promptshield.io')
         .maybeSingle();
-    cachedDemoOrgId = data?.id ?? null;
-    return cachedDemoOrgId;
+    const resolved: string | null = data?.id ?? null;
+    cachedDemoOrgId = resolved;
+    return resolved;
 }
 
 export type AuditEventInsert = {
