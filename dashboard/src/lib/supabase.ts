@@ -170,7 +170,7 @@ export async function fetchOrgRules(orgId: string) {
  * Create a new org rule
  */
 export async function createOrgRule(orgId: string, rule: any) {
-    if (!supabase) return null;
+    if (!supabase) throw new Error('Supabase is not configured');
 
     const { data, error } = await supabase
         .from('org_rules')
@@ -190,7 +190,7 @@ export async function createOrgRule(orgId: string, rule: any) {
 
     if (error) {
         console.error('Error creating org rule:', error);
-        return null;
+        throw new Error(error.message || 'Failed to create rule');
     }
 
     return data?.[0] || null;
@@ -200,7 +200,7 @@ export async function createOrgRule(orgId: string, rule: any) {
  * Update an org rule
  */
 export async function updateOrgRule(ruleId: number, updates: any) {
-    if (!supabase) return null;
+    if (!supabase) throw new Error('Supabase is not configured');
 
     const { data, error } = await supabase
         .from('org_rules')
@@ -210,7 +210,7 @@ export async function updateOrgRule(ruleId: number, updates: any) {
 
     if (error) {
         console.error('Error updating org rule:', error);
-        return null;
+        throw new Error(error.message || 'Failed to update rule');
     }
 
     return data?.[0] || null;
@@ -220,16 +220,20 @@ export async function updateOrgRule(ruleId: number, updates: any) {
  * Delete an org rule
  */
 export async function deleteOrgRule(ruleId: number) {
-    if (!supabase) return false;
+    if (!supabase) throw new Error('Supabase is not configured');
 
-    const { error } = await supabase
+    const { error, count } = await supabase
         .from('org_rules')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', ruleId);
 
     if (error) {
         console.error('Error deleting org rule:', error);
-        return false;
+        throw new Error(error.message || 'Failed to delete rule');
+    }
+
+    if (count === 0) {
+        throw new Error('Rule not deleted (likely blocked by RLS or already removed)');
     }
 
     return true;

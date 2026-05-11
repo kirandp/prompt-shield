@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, isSupabaseConfigured, fetchOrgRules, createOrgRule, updateOrgRule, deleteOrgRule, subscribeToRules } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured, fetchOrgRules, createOrgRule, updateOrgRule, deleteOrgRule, subscribeToRules, getDemoOrgId } from '@/lib/supabase';
 
 export default function RulesPage() {
     const [rules, setRules] = useState<any[]>([]);
@@ -9,20 +9,17 @@ export default function RulesPage() {
     const [editingRule, setEditingRule] = useState<any>(null);
     const [formData, setFormData] = useState({ name: '', type: 'exact', match: '', replacement: '' });
     const [loading, setLoading] = useState(true);
-
-    // Demo org ID
-    const DEMO_ORG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+    const [orgId, setOrgId] = useState<string | null>(null);
 
     // Load rules on mount
     useEffect(() => {
-        const loadRules = async () => {
-            if (!isSupabaseConfigured) {
-                setLoading(false);
-                return;
-            }
+        let cancelled = false;
+        let unsubscribe: (() => void) | null = null;
 
+        const loadRules = async (resolvedOrgId: string) => {
             try {
-                const data = await fetchOrgRules(DEMO_ORG_ID);
+                const data = await fetchOrgRules(resolvedOrgId);
+                if (cancelled) return;
                 if (data) {
                     setRules(data.map((rule: any) => ({
                         id: rule.id,
@@ -38,23 +35,35 @@ export default function RulesPage() {
             } catch (error) {
                 console.error('Error loading rules:', error);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         };
 
-        loadRules();
+        (async () => {
+            if (!isSupabaseConfigured) {
+                setLoading(false);
+                return;
+            }
 
-        // Subscribe to real-time updates
-        if (isSupabaseConfigured) {
-            const unsubscribe = subscribeToRules((event: any) => {
-                if (event.eventType === 'INSERT') {
-                    loadRules();
-                } else if (event.eventType === 'UPDATE' || event.eventType === 'DELETE') {
-                    loadRules();
-                }
+            const resolved = await getDemoOrgId();
+            if (cancelled) return;
+            if (!resolved) {
+                console.error('Could not resolve demo org id — did you run seed-demo-data.sql?');
+                setLoading(false);
+                return;
+            }
+            setOrgId(resolved);
+            await loadRules(resolved);
+
+            unsubscribe = subscribeToRules(() => {
+                loadRules(resolved);
             });
-            return unsubscribe;
-        }
+        })();
+
+        return () => {
+            cancelled = true;
+            unsubscribe?.();
+        };
     }, []);
 
     const handleAddRule = () => {
@@ -76,33 +85,29 @@ export default function RulesPage() {
 
     const handleDeleteRule = async (id: number) => {
         if (!confirm('Are you sure you want to delete this rule?')) return;
+        if (!isSupabaseConfigured) return;
 
-        if (isSupabaseConfigured) {
-            try {
-                const success = await deleteOrgRule(id);
-                if (success) {
-                    setRules(rules.filter(r => r.id !== id));
-                }
-            } catch (error) {
-                console.error('Error deleting rule:', error);
-                alert('Failed to delete rule');
-            }
+        try {
+            await deleteOrgRule(id);
+            setRules(rules.filter(r => r.id !== id));
+        } catch (error: any) {
+            console.error('Error deleting rule:', error);
+            alert(`Failed to delete rule: ${error?.message ?? 'unknown error'}`);
         }
     };
 
     const handleToggleRule = async (id: number) => {
         const rule = rules.find(r => r.id === id);
-        if (!rule) return;
+        if (!rule || !isSupabaseConfigured) return;
 
-        if (isSupabaseConfigured) {
-            try {
-                await updateOrgRule(id, { enabled: !rule.enabled });
-                setRules(rules.map(r =>
-                    r.id === id ? { ...r, enabled: !r.enabled } : r
-                ));
-            } catch (error) {
-                console.error('Error toggling rule:', error);
-            }
+        try {
+            await updateOrgRule(id, { enabled: !rule.enabled });
+            setRules(rules.map(r =>
+                r.id === id ? { ...r, enabled: !r.enabled } : r
+            ));
+        } catch (error: any) {
+            console.error('Error toggling rule:', error);
+            alert(`Failed to toggle rule: ${error?.message ?? 'unknown error'}`);
         }
     };
 
@@ -114,41 +119,49 @@ export default function RulesPage() {
             return;
         }
 
-        if (isSupabaseConfigured) {
-            try {
-                if (editingRule) {
-                    await updateOrgRule(editingRule.id, {
-                        name: formData.name,
-                        rule_type: formData.type,
-                        match_pattern: formData.match,
-                        replacement: formData.replacement
-                    });
-                } else {
-                    await createOrgRule(DEMO_ORG_ID, {
-                        name: formData.name,
-                        type: formData.type,
-                        match: formData.match,
-                        replacement: formData.replacement
-                    });
-                }
-                setShowForm(false);
-                const updatedRules = await fetchOrgRules(DEMO_ORG_ID);
-                if (updatedRules) {
-                    setRules(updatedRules.map((rule: any) => ({
-                        id: rule.id,
-                        name: rule.name,
-                        type: rule.rule_type,
-                        match: rule.match_pattern,
-                        replacement: rule.replacement,
-                        enabled: rule.enabled,
-                        hits: rule.hit_count || 0,
-                        isOrgRule: true
-                    })));
-                }
-            } catch (error) {
-                console.error('Error saving rule:', error);
-                alert('Failed to save rule');
+        if (!isSupabaseConfigured) {
+            alert('Supabase is not configured — set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+            return;
+        }
+
+        if (!orgId) {
+            alert('Demo org not found — run supabase/seed-demo-data.sql against your Supabase project.');
+            return;
+        }
+
+        try {
+            if (editingRule) {
+                await updateOrgRule(editingRule.id, {
+                    name: formData.name,
+                    rule_type: formData.type,
+                    match_pattern: formData.match,
+                    replacement: formData.replacement
+                });
+            } else {
+                await createOrgRule(orgId, {
+                    name: formData.name,
+                    type: formData.type,
+                    match: formData.match,
+                    replacement: formData.replacement
+                });
             }
+            setShowForm(false);
+            const updatedRules = await fetchOrgRules(orgId);
+            if (updatedRules) {
+                setRules(updatedRules.map((rule: any) => ({
+                    id: rule.id,
+                    name: rule.name,
+                    type: rule.rule_type,
+                    match: rule.match_pattern,
+                    replacement: rule.replacement,
+                    enabled: rule.enabled,
+                    hits: rule.hit_count || 0,
+                    isOrgRule: true
+                })));
+            }
+        } catch (error: any) {
+            console.error('Error saving rule:', error);
+            alert(`Failed to save rule: ${error?.message ?? 'unknown error'}`);
         }
     };
 
