@@ -197,7 +197,10 @@ export default function ScannerPage() {
                 alert(rejected.join('\n'));
             }
             if (accepted.length === 0) return;
-            setFiles((prev) => [...accepted, ...prev]);
+            // Replace the previous results so the page only ever shows the
+            // analysis for the current selection — no stacking. The audit log
+            // still preserves history of every scan that ran.
+            setFiles(accepted);
             void runScans(accepted);
         },
         [runScans],
