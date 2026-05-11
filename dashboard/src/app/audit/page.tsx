@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase, subscribeToAuditEvents, isSupabaseConfigured } from '@/lib/supabase';
+import { DatePickerField } from '@/components/DatePickerField';
 
 type AuditEvent = {
   id: number | string;
@@ -291,18 +292,18 @@ export default function AuditPage() {
           <option value="low">Low</option>
         </select>
 
-        <input
-          type="date"
+        <DatePickerField
           value={filters.startDate}
-          onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-          aria-label="Start date"
+          onChange={(v) => setFilters({ ...filters, startDate: v })}
+          ariaLabel="Start date"
+          placeholder="Start date"
         />
 
-        <input
-          type="date"
+        <DatePickerField
           value={filters.endDate}
-          onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-          aria-label="End date"
+          onChange={(v) => setFilters({ ...filters, endDate: v })}
+          ariaLabel="End date"
+          placeholder="End date"
         />
 
         {(filters.mode !== 'all' || filters.severity !== 'all' || filters.startDate || filters.endDate) && (
