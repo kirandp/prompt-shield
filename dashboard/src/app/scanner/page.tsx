@@ -413,6 +413,7 @@ export default function ScannerPage() {
 
 function ScanCard({ state }: { state: FileState }) {
     const [showExcerpts, setShowExcerpts] = useState(false);
+    const [showContents, setShowContents] = useState(false);
     const { file, status, result, error, progress } = state;
 
     let statusLabel = '';
@@ -462,6 +463,25 @@ function ScanCard({ state }: { state: FileState }) {
             {status === 'done' && result && (
                 <>
                     <RiskMeter score={result.risk_score} severity={result.severity} />
+
+                    {result.extracted_text && (
+                        <div className="contents-section">
+                            <button
+                                type="button"
+                                className="btn btn-link"
+                                onClick={() => setShowContents((v) => !v)}
+                                aria-expanded={showContents}
+                            >
+                                {showContents ? 'Hide document contents' : 'View document contents'}
+                                <span className="contents-toggle-meta">
+                                    {' '}({result.extracted_chars.toLocaleString()} chars)
+                                </span>
+                            </button>
+                            {showContents && (
+                                <pre className="contents-pre">{result.extracted_text}</pre>
+                            )}
+                        </div>
+                    )}
 
                     {result.threats_detected.length === 0 ? (
                         <div className="scan-card-clean">
@@ -634,6 +654,33 @@ function ScanCard({ state }: { state: FileState }) {
                     border-radius: 6px;
                     font-size: 14px;
                     line-height: 1.5;
+                }
+
+                .contents-section {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .contents-toggle-meta {
+                    color: #999;
+                    font-weight: 400;
+                }
+
+                .contents-pre {
+                    margin: 0;
+                    max-height: 280px;
+                    overflow: auto;
+                    padding: 12px 14px;
+                    background: #fafafa;
+                    border: 1px solid #eee;
+                    border-radius: 6px;
+                    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                    font-size: 12px;
+                    line-height: 1.55;
+                    color: #333;
+                    white-space: pre-wrap;
+                    word-break: break-word;
                 }
 
                 .threat-list {
