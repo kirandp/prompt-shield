@@ -1,59 +1,107 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const detectionData = [
-    { category: 'PHI', count: 42 },
-    { category: 'PII', count: 67 },
-    { category: 'Secrets', count: 23 },
-    { category: 'Financial', count: 15 }
-];
-
-const modeData = [
-    { mode: 'Shadow', events: 120 },
-    { mode: 'Fix', events: 89 },
-    { mode: 'Warn', events: 54 }
-];
-
-const trendData = [
-    { date: 'Jan 1', detections: 12 },
-    { date: 'Jan 2', detections: 19 },
-    { date: 'Jan 3', detections: 15 },
-    { date: 'Jan 4', detections: 28 },
-    { date: 'Jan 5', detections: 25 },
-    { date: 'Jan 6', detections: 32 },
-    { date: 'Jan 7', detections: 18 }
-];
+import { supabase, isSupabaseConfigured, fetchAuditStats, fetchOrgRules, getDemoOrgId } from '@/lib/supabase';
 
 export default function DashboardPage() {
+    const [detectionData, setDetectionData] = useState<any[]>([]);
+    const [modeData, setModeData] = useState<any[]>([]);
+    const [trendData, setTrendData] = useState<any[]>([]);
+    const [totalDetections, setTotalDetections] = useState(0);
+    const [totalMasked, setTotalMasked] = useState(0);
+    const [totalBlocked, setTotalBlocked] = useState(0);
+    const [rulesCount, setRulesCount] = useState(0);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadData = async () => {
+            if (!isSupabaseConfigured) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                // Resolve the demo org dynamically — the Shield page stamps rows
+                // with this same id, so both pages stay in sync if the seed changes.
+                const orgId = await getDemoOrgId();
+                if (!orgId) {
+                    setLoading(false);
+                    return;
+                }
+
+                // Fetch audit stats
+                const stats = await fetchAuditStats(orgId, 7);
+                if (stats) {
+                    setTotalDetections(stats.totalDetections);
+                    setTotalMasked(stats.totalMasked);
+                    setTotalBlocked(stats.totalBlocked);
+
+                    // Build detection data for bar chart
+                    const categories = Object.entries(stats.detectionsByCategory).map(([category, count]) => ({
+                        category,
+                        count: count as number
+                    }));
+                    setDetectionData(categories.length > 0 ? categories : [{ category: 'No data', count: 0 }]);
+
+                    // Build mode data for bar chart
+                    const modes = Object.entries(stats.detectionsByMode).map(([mode, count]) => ({
+                        mode: mode.charAt(0).toUpperCase() + mode.slice(1),
+                        events: count as number
+                    }));
+                    setModeData(modes);
+
+                    // Build trend data for line chart
+                    const trend = Object.entries(stats.trendByDay)
+                        .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                        .map(([date, count]) => ({
+                            date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                            detections: count as number
+                        }));
+                    setTrendData(trend.length > 0 ? trend : [{ date: 'No data', detections: 0 }]);
+                }
+
+                // Fetch rules count
+                const rules = await fetchOrgRules(orgId);
+                setRulesCount(rules ? rules.length : 0);
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, []);
+
     return (
         <div className="page">
             <div className="page-header">
                 <h2>Analytics Dashboard</h2>
-                <p>Compliance metrics and detection trends</p>
+                <p>Compliance metrics and detection trends {!isSupabaseConfigured && '(Demo Mode)'}</p>
             </div>
 
             {/* Metric Cards */}
             <div className="metrics-grid">
                 <div className="metric-card">
                     <div className="metric-label">Total Detections</div>
-                    <div className="metric-value">147</div>
-                    <div className="metric-change">+12% this week</div>
+                    <div className="metric-value">{loading ? '-' : totalDetections}</div>
+                    <div className="metric-change">Last 7 days</div>
                 </div>
                 <div className="metric-card">
                     <div className="metric-label">Items Masked</div>
-                    <div className="metric-value">89</div>
-                    <div className="metric-change">+8% this week</div>
+                    <div className="metric-value">{loading ? '-' : totalMasked}</div>
+                    <div className="metric-change">Auto-masked events</div>
                 </div>
                 <div className="metric-card">
                     <div className="metric-label">Prompts Blocked</div>
-                    <div className="metric-value">23</div>
+                    <div className="metric-value">{loading ? '-' : totalBlocked}</div>
                     <div className="metric-change">High-risk attempts</div>
                 </div>
                 <div className="metric-card">
                     <div className="metric-label">Custom Rules Active</div>
-                    <div className="metric-value">12</div>
-                    <div className="metric-change">3 org-wide</div>
+                    <div className="metric-value">{loading ? '-' : rulesCount}</div>
+                    <div className="metric-change">Organization-wide</div>
                 </div>
             </div>
 

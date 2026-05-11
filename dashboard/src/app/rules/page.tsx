@@ -1,47 +1,155 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase, isSupabaseConfigured, fetchOrgRules, createOrgRule, updateOrgRule, deleteOrgRule, subscribeToRules } from '@/lib/supabase';
 
 export default function RulesPage() {
-    const [rules, setRules] = useState<any[]>([
-        {
-            id: 1,
-            name: 'Client substitution',
-            type: 'exact',
-            match: 'Acme Corporation',
-            replacement: 'Sample Corp',
-            enabled: true,
-            hits: 42,
-            isOrgRule: true
-        },
-        {
-            id: 2,
-            name: 'SSN masking',
-            type: 'regex',
-            pattern: '\\d{3}-\\d{2}-\\d{4}',
-            replacement: '000-00-0000',
-            enabled: true,
-            hits: 127,
-            isOrgRule: false
-        }
-    ]);
-
+    const [rules, setRules] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [editingRule, setEditingRule] = useState<any>(null);
+    const [formData, setFormData] = useState({ name: '', type: 'exact', match: '', replacement: '' });
+    const [loading, setLoading] = useState(true);
+
+    // Demo org ID
+    const DEMO_ORG_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
+
+    // Load rules on mount
+    useEffect(() => {
+        const loadRules = async () => {
+            if (!isSupabaseConfigured) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const data = await fetchOrgRules(DEMO_ORG_ID);
+                if (data) {
+                    setRules(data.map((rule: any) => ({
+                        id: rule.id,
+                        name: rule.name,
+                        type: rule.rule_type,
+                        match: rule.match_pattern,
+                        replacement: rule.replacement,
+                        enabled: rule.enabled,
+                        hits: rule.hit_count || 0,
+                        isOrgRule: true
+                    })));
+                }
+            } catch (error) {
+                console.error('Error loading rules:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadRules();
+
+        // Subscribe to real-time updates
+        if (isSupabaseConfigured) {
+            const unsubscribe = subscribeToRules((event: any) => {
+                if (event.eventType === 'INSERT') {
+                    loadRules();
+                } else if (event.eventType === 'UPDATE' || event.eventType === 'DELETE') {
+                    loadRules();
+                }
+            });
+            return unsubscribe;
+        }
+    }, []);
 
     const handleAddRule = () => {
         setEditingRule(null);
+        setFormData({ name: '', type: 'exact', match: '', replacement: '' });
         setShowForm(true);
     };
 
-    const handleDeleteRule = (id: number) => {
-        setRules(rules.filter(r => r.id !== id));
+    const handleEditRule = (rule: any) => {
+        setEditingRule(rule);
+        setFormData({
+            name: rule.name,
+            type: rule.type,
+            match: rule.match || '',
+            replacement: rule.replacement
+        });
+        setShowForm(true);
     };
 
-    const handleToggleRule = (id: number) => {
-        setRules(rules.map(r =>
-            r.id === id ? { ...r, enabled: !r.enabled } : r
-        ));
+    const handleDeleteRule = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this rule?')) return;
+
+        if (isSupabaseConfigured) {
+            try {
+                const success = await deleteOrgRule(id);
+                if (success) {
+                    setRules(rules.filter(r => r.id !== id));
+                }
+            } catch (error) {
+                console.error('Error deleting rule:', error);
+                alert('Failed to delete rule');
+            }
+        }
+    };
+
+    const handleToggleRule = async (id: number) => {
+        const rule = rules.find(r => r.id === id);
+        if (!rule) return;
+
+        if (isSupabaseConfigured) {
+            try {
+                await updateOrgRule(id, { enabled: !rule.enabled });
+                setRules(rules.map(r =>
+                    r.id === id ? { ...r, enabled: !r.enabled } : r
+                ));
+            } catch (error) {
+                console.error('Error toggling rule:', error);
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!formData.name || !formData.match || !formData.replacement) {
+            alert('Please fill in all fields');
+            return;
+        }
+
+        if (isSupabaseConfigured) {
+            try {
+                if (editingRule) {
+                    await updateOrgRule(editingRule.id, {
+                        name: formData.name,
+                        rule_type: formData.type,
+                        match_pattern: formData.match,
+                        replacement: formData.replacement
+                    });
+                } else {
+                    await createOrgRule(DEMO_ORG_ID, {
+                        name: formData.name,
+                        type: formData.type,
+                        match: formData.match,
+                        replacement: formData.replacement
+                    });
+                }
+                setShowForm(false);
+                const updatedRules = await fetchOrgRules(DEMO_ORG_ID);
+                if (updatedRules) {
+                    setRules(updatedRules.map((rule: any) => ({
+                        id: rule.id,
+                        name: rule.name,
+                        type: rule.rule_type,
+                        match: rule.match_pattern,
+                        replacement: rule.replacement,
+                        enabled: rule.enabled,
+                        hits: rule.hit_count || 0,
+                        isOrgRule: true
+                    })));
+                }
+            } catch (error) {
+                console.error('Error saving rule:', error);
+                alert('Failed to save rule');
+            }
+        }
     };
 
     return (
@@ -49,7 +157,7 @@ export default function RulesPage() {
             <div className="page-header">
                 <div>
                     <h2>Custom Rules</h2>
-                    <p>Define organization-wide and personal masking rules</p>
+                    <p>Define organization-wide masking rules {!isSupabaseConfigured && '(Demo Mode)'}</p>
                 </div>
                 <button className="btn btn-primary" onClick={handleAddRule}>
                     + Add Rule
@@ -59,57 +167,35 @@ export default function RulesPage() {
             <div className="rules-container">
                 {/* Org Rules Section */}
                 <div className="section">
-                    <h3>Organization Rules</h3>
+                    <h3>Organization Rules {loading && <span style={{fontSize: '12px', color: '#666'}}>(Loading...)</span>}</h3>
                     <div className="rules-list">
-                        {rules.filter(r => r.isOrgRule).map(rule => (
-                            <div key={rule.id} className="rule-item">
-                                <div className="rule-info">
-                                    <div className="rule-name">{rule.name}</div>
-                                    <div className="rule-details">
-                                        <span className="rule-type">{rule.type}</span>
-                                        <span className="rule-match">{rule.match || rule.pattern}</span>
-                                        <span className="rule-hits">{rule.hits} hits</span>
+                        {rules.length === 0 ? (
+                            <div style={{padding: '20px', textAlign: 'center', color: '#666'}}>
+                                {loading ? 'Loading rules...' : 'No rules configured yet. Add one to get started!'}
+                            </div>
+                        ) : (
+                            rules.map(rule => (
+                                <div key={rule.id} className="rule-item">
+                                    <div className="rule-info">
+                                        <div className="rule-name">{rule.name}</div>
+                                        <div className="rule-details">
+                                            <span className="rule-type">{rule.type}</span>
+                                            <span className="rule-match">{rule.match}</span>
+                                            <span className="rule-hits">{rule.hits} hits</span>
+                                        </div>
+                                    </div>
+                                    <div className="rule-actions">
+                                        <input
+                                            type="checkbox"
+                                            checked={rule.enabled}
+                                            onChange={() => handleToggleRule(rule.id)}
+                                        />
+                                        <button className="btn-icon" onClick={() => handleEditRule(rule)}>✎</button>
+                                        <button className="btn-icon" onClick={() => handleDeleteRule(rule.id)}>✕</button>
                                     </div>
                                 </div>
-                                <div className="rule-actions">
-                                    <input
-                                        type="checkbox"
-                                        checked={rule.enabled}
-                                        onChange={() => handleToggleRule(rule.id)}
-                                    />
-                                    <button className="btn-icon">✎</button>
-                                    <button className="btn-icon" onClick={() => handleDeleteRule(rule.id)}>✕</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Personal Rules Section */}
-                <div className="section">
-                    <h3>Your Personal Rules</h3>
-                    <div className="rules-list">
-                        {rules.filter(r => !r.isOrgRule).map(rule => (
-                            <div key={rule.id} className="rule-item">
-                                <div className="rule-info">
-                                    <div className="rule-name">{rule.name}</div>
-                                    <div className="rule-details">
-                                        <span className="rule-type">{rule.type}</span>
-                                        <span className="rule-match">{rule.match || rule.pattern}</span>
-                                        <span className="rule-hits">{rule.hits} hits</span>
-                                    </div>
-                                </div>
-                                <div className="rule-actions">
-                                    <input
-                                        type="checkbox"
-                                        checked={rule.enabled}
-                                        onChange={() => handleToggleRule(rule.id)}
-                                    />
-                                    <button className="btn-icon">✎</button>
-                                    <button className="btn-icon" onClick={() => handleDeleteRule(rule.id)}>✕</button>
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
@@ -117,16 +203,26 @@ export default function RulesPage() {
             {showForm && (
                 <div className="modal-overlay" onClick={() => setShowForm(false)}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <h3>Add New Rule</h3>
-                        <form>
+                        <h3>{editingRule ? 'Edit Rule' : 'Add New Rule'}</h3>
+                        <form onSubmit={handleSubmit}>
                             <div className="form-group">
                                 <label>Rule Name *</label>
-                                <input type="text" placeholder="e.g., Client substitution" required />
+                                <input
+                                    type="text"
+                                    placeholder="e.g., Client substitution"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                    required
+                                />
                             </div>
 
                             <div className="form-group">
                                 <label>Type *</label>
-                                <select required>
+                                <select
+                                    value={formData.type}
+                                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                                    required
+                                >
                                     <option value="exact">Exact Match</option>
                                     <option value="regex">Regex Pattern</option>
                                     <option value="category">Category Override</option>
@@ -135,12 +231,24 @@ export default function RulesPage() {
 
                             <div className="form-group">
                                 <label>Match Value *</label>
-                                <input type="text" placeholder="e.g., Acme Corporation" required />
+                                <input
+                                    type="text"
+                                    placeholder="e.g., Acme Corporation"
+                                    value={formData.match}
+                                    onChange={(e) => setFormData({...formData, match: e.target.value})}
+                                    required
+                                />
                             </div>
 
                             <div className="form-group">
                                 <label>Replacement *</label>
-                                <input type="text" placeholder="e.g., Sample Corp" required />
+                                <input
+                                    type="text"
+                                    placeholder="e.g., Sample Corp"
+                                    value={formData.replacement}
+                                    onChange={(e) => setFormData({...formData, replacement: e.target.value})}
+                                    required
+                                />
                             </div>
 
                             <div className="form-actions">
@@ -148,7 +256,7 @@ export default function RulesPage() {
                                     Cancel
                                 </button>
                                 <button type="submit" className="btn btn-primary">
-                                    Create Rule
+                                    {editingRule ? 'Update Rule' : 'Create Rule'}
                                 </button>
                             </div>
                         </form>

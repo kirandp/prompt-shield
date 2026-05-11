@@ -1,6 +1,30 @@
 'use client';
 
 import { useState } from 'react';
+import {
+  generateSyntheticPatientRecord,
+  generateSyntheticFinancialRecord,
+  generateSyntheticSecret,
+  generateSyntheticCorporateData,
+} from '@/lib/fakerData';
+import { insertAuditEvent } from '@/lib/supabase';
+
+const SEVERITY_RANK: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
+
+function summarizeDetections(dets: any[]) {
+  const categories = Array.from(new Set(dets.map((d) => d.category)));
+  let max: string | null = null;
+  let rank = 0;
+  for (const d of dets) {
+    const r = SEVERITY_RANK[d.severity] ?? 0;
+    if (r > rank) { rank = r; max = d.severity; }
+  }
+  return {
+    detection_count: dets.length,
+    categories_found: categories,
+    max_severity: max,
+  };
+}
 
 // Detection patterns - PHI (Protected Health Information)
 const PHI_PATTERNS = {
@@ -16,10 +40,37 @@ const PII_PATTERNS = {
   EMAIL: { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, category: 'PII', severity: 'high', id: 'EMAIL', description: 'Email Address' }
 };
 
+// Detection patterns - FINANCIAL DATA
+const FINANCIAL_PATTERNS = {
+  CREDIT_CARD: { pattern: /(?:Card\s+Number|Credit\s+Card):\s*(\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4})/gi, category: 'FINANCIAL', severity: 'critical', id: 'CREDIT_CARD', description: 'Credit Card Number' },
+  CARD_NUMBER_PATTERN: { pattern: /\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b/g, category: 'FINANCIAL', severity: 'critical', id: 'CARD_NUMBER', description: 'Card Number' },
+  CVV: { pattern: /(?:CVV|CVC):\s*(\d{3,4})/gi, category: 'FINANCIAL', severity: 'critical', id: 'CVV', description: 'Card CVV/CVC' },
+  ACCOUNT_NUMBER: { pattern: /(?:Account\s+Number|Account\s+#):\s*(\d{10,12})/gi, category: 'FINANCIAL', severity: 'high', id: 'ACCOUNT_NUMBER', description: 'Account Number' },
+  ROUTING_NUMBER: { pattern: /(?:Routing\s+Number|Routing\s+#):\s*(\d{9})/gi, category: 'FINANCIAL', severity: 'high', id: 'ROUTING_NUMBER', description: 'Routing Number' },
+  TRANSACTION_AMOUNT: { pattern: /(?:Transaction\s+Amount|Amount):\s*\$?([\d,]+\.?\d{0,2})/gi, category: 'FINANCIAL', severity: 'medium', id: 'TRANSACTION_AMOUNT', description: 'Transaction Amount' }
+};
+
+// Detection patterns - SECRETS (API Keys, Tokens, Passwords)
+const SECRET_PATTERNS = {
+  API_KEY: { pattern: /(?:API\s+Key|api_key):\s*(sk_live_[a-zA-Z0-9_]{20,}|[a-zA-Z0-9]{32,})/gi, category: 'SECRET', severity: 'critical', id: 'API_KEY', description: 'API Key' },
+  AUTH_TOKEN: { pattern: /(?:Auth\s+Token|Token):\s*([a-zA-Z0-9_\-]{40,})/gi, category: 'SECRET', severity: 'critical', id: 'AUTH_TOKEN', description: 'Authentication Token' },
+  PASSWORD: { pattern: /(?:Password):\s*([^\s\n]+)/gi, category: 'SECRET', severity: 'critical', id: 'PASSWORD', description: 'Password' },
+  SERVICE_KEY: { pattern: /(?:sk_live_)([a-zA-Z0-9_]{20,})/gi, category: 'SECRET', severity: 'critical', id: 'SERVICE_KEY', description: 'Service Key' }
+};
+
+// Detection patterns - CORPORATE DATA
+const CORPORATE_PATTERNS = {
+  EMPLOYEE_ID: { pattern: /(?:Employee\s+ID|EMP):\s*([A-Z]{0,3}[\-]?\d{4}[\-]?\d{4})/gi, category: 'CORPORATE', severity: 'high', id: 'EMPLOYEE_ID', description: 'Employee ID' },
+  IP_ADDRESS: { pattern: /(?:IP|Workstation\s+IP):\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/g, category: 'CORPORATE', severity: 'high', id: 'IP_ADDRESS', description: 'IP Address' },
+  MAC_ADDRESS: { pattern: /(?:MAC|MAC\s+Address):\s*([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5})/g, category: 'CORPORATE', severity: 'high', id: 'MAC_ADDRESS', description: 'MAC Address' },
+  JOB_TITLE: { pattern: /(?:Role):\s*([A-Za-z\s]+?)(?:\n|$)/gi, category: 'CORPORATE', severity: 'medium', id: 'JOB_TITLE', description: 'Job Title' },
+  EMPLOYEE_NAME: { pattern: /(?:Employee):\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g, category: 'CORPORATE', severity: 'high', id: 'EMPLOYEE_NAME', description: 'Employee Name' }
+};
+
 // Simple detection engine
 function detectSensitiveData(text: string) {
   const detections: any[] = [];
-  const allPatterns = { ...PHI_PATTERNS, ...PII_PATTERNS };
+  const allPatterns = { ...PHI_PATTERNS, ...PII_PATTERNS, ...FINANCIAL_PATTERNS, ...SECRET_PATTERNS, ...CORPORATE_PATTERNS };
 
   for (const [key, patternObj] of Object.entries(allPatterns)) {
     const regex = new RegExp(patternObj.pattern.source, patternObj.pattern.flags);
@@ -73,13 +124,21 @@ function buildHighlighted(text: string, detections: any[]) {
     'PHI': '#FCEBEB',
     'PII': '#FAEEDA',
     'SECRET': '#EEEDFE',
-    'FINANCIAL': '#E1F5EE'
+    'FINANCIAL': '#E1F5EE',
+    'CORPORATE': '#E3F2FD'
   };
 
   for (const det of detections) {
     html += escapeHtml(text.substring(lastEnd, det.start));
     const bgColor = colorMap[det.category] || '#E8E8E8';
-    const textColor = det.category === 'PHI' ? '#A32D2D' : '#633806';
+    const textColorMap: Record<string, string> = {
+      'PHI': '#A32D2D',
+      'PII': '#633806',
+      'SECRET': '#4A148C',
+      'FINANCIAL': '#00695C',
+      'CORPORATE': '#0D47A1'
+    };
+    const textColor = textColorMap[det.category] || '#333';
     html += `<mark style="background-color: ${bgColor}; color: ${textColor}; padding: 2px 4px; border-radius: 3px; font-weight: 600;">${escapeHtml(det.text)}</mark>`;
     lastEnd = det.end;
   }
@@ -88,13 +147,13 @@ function buildHighlighted(text: string, detections: any[]) {
   return html;
 }
 
-// Build masked text
-function buildMasked(text: string, detections: any[]) {
-  if (detections.length === 0) return text;
+// Build masked text + token map (token map is needed to de-anonymize the AI response)
+function buildMasked(text: string, detections: any[]): { masked: string; tokenMap: Map<string, string> } {
+  const tokenMap = new Map<string, string>();
+  if (detections.length === 0) return { masked: text, tokenMap };
 
   let masked = '';
   let lastEnd = 0;
-  const tokenMap = new Map<string, string>();
   const categoryCounters: Record<string, number> = {};
 
   for (const det of detections) {
@@ -112,7 +171,18 @@ function buildMasked(text: string, detections: any[]) {
   }
 
   masked += text.substring(lastEnd);
-  return masked;
+  return { masked, tokenMap };
+}
+
+// Replace tokens back to their original values (used on the AI response).
+function deanonymize(text: string, tokenMap: Map<string, string> | null): string {
+  if (!tokenMap || tokenMap.size === 0) return text;
+  let result = text;
+  for (const [original, token] of tokenMap.entries()) {
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    result = result.replace(new RegExp(escaped, 'g'), original);
+  }
+  return result;
 }
 
 export default function ShieldPage() {
@@ -120,7 +190,19 @@ export default function ShieldPage() {
   const [detections, setDetections] = useState<any[]>([]);
   const [highlighted, setHighlighted] = useState('');
   const [masked, setMasked] = useState('');
+  const [tokenMap, setTokenMap] = useState<Map<string, string> | null>(null);
   const [mode, setMode] = useState<'shadow' | 'fix' | 'warn'>('warn');
+
+  const [provider, setProvider] = useState<'ollama' | 'claude'>('ollama');
+  const [response, setResponse] = useState<string | null>(null);
+  const [responseRaw, setResponseRaw] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
+
+  const [sessionId] = useState(
+    () => `shield_${Math.random().toString(36).slice(2, 10)}`
+  );
 
   const handleScan = async () => {
     if (!input.trim()) {
@@ -129,9 +211,101 @@ export default function ShieldPage() {
     }
 
     const found = detectSensitiveData(input);
+    const { masked: maskedText, tokenMap: map } = buildMasked(input, found);
+
     setDetections(found);
     setHighlighted(buildHighlighted(input, found));
-    setMasked(buildMasked(input, found));
+    setMasked(maskedText);
+    setTokenMap(map);
+    // Reset any previous AI run
+    setResponse(null);
+    setResponseRaw(null);
+    setSendError(null);
+
+    void insertAuditEvent({
+      event_type: 'detection',
+      mode,
+      action_taken: found.length > 0 ? 'detected' : 'clean',
+      session_id: sessionId,
+      ...summarizeDetections(found),
+    });
+  };
+
+  const handleMaskAndSend = async () => {
+    if (!masked) return;
+    setIsSending(true);
+    setSendError(null);
+    setResponse(null);
+    setResponseRaw(null);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider, prompt: masked }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+
+      const raw = String(data?.content ?? '');
+      setResponseRaw(raw);
+      setResponse(deanonymize(raw, tokenMap));
+
+      void insertAuditEvent({
+        event_type: 'masked',
+        mode,
+        action_taken: 'masked',
+        ai_tool: provider,
+        session_id: sessionId,
+        ...summarizeDetections(detections),
+      });
+    } catch (e: any) {
+      setSendError(e?.message ?? 'Request failed');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleEditManually = () => {
+    if (!masked) return;
+
+    void insertAuditEvent({
+      event_type: 'allowed',
+      mode,
+      action_taken: 'edited',
+      session_id: sessionId,
+      ...summarizeDetections(detections),
+    });
+
+    setSampleInput(masked);
+    setDetections([]);
+    setHighlighted('');
+    setMasked('');
+    setTokenMap(null);
+    setResponse(null);
+    setResponseRaw(null);
+    setSendError(null);
+  };
+
+  const handleBlock = () => {
+    if (detections.length > 0) {
+      void insertAuditEvent({
+        event_type: 'blocked',
+        mode,
+        action_taken: 'blocked',
+        session_id: sessionId,
+        ...summarizeDetections(detections),
+      });
+    }
+
+    setSampleInput('');
+    setDetections([]);
+    setHighlighted('');
+    setMasked('');
+    setTokenMap(null);
+    setResponse(null);
+    setResponseRaw(null);
+    setSendError(null);
   };
 
   return (
@@ -160,10 +334,74 @@ export default function ShieldPage() {
 
         {/* Input Textarea */}
         <div className="section">
-          <h3>Sample Text</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h3 style={{ margin: 0 }}>Sample Text</h3>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                className="btn btn-demo"
+                onClick={() => {
+                  setSampleInput(generateSyntheticPatientRecord());
+                  setDetections([]);
+                  setHighlighted('');
+                  setMasked('');
+                  setTokenMap(null);
+                  setResponse(null);
+                  setResponseRaw(null);
+                }}
+                title="Load synthetic patient medical record with PHI"
+              >
+                📋 Patient Record
+              </button>
+              <button
+                className="btn btn-demo"
+                onClick={() => {
+                  setSampleInput(generateSyntheticFinancialRecord());
+                  setDetections([]);
+                  setHighlighted('');
+                  setMasked('');
+                  setTokenMap(null);
+                  setResponse(null);
+                  setResponseRaw(null);
+                }}
+                title="Load synthetic financial data with PII"
+              >
+                💳 Financial Data
+              </button>
+              <button
+                className="btn btn-demo"
+                onClick={() => {
+                  setSampleInput(generateSyntheticSecret());
+                  setDetections([]);
+                  setHighlighted('');
+                  setMasked('');
+                  setTokenMap(null);
+                  setResponse(null);
+                  setResponseRaw(null);
+                }}
+                title="Load synthetic API secrets and credentials"
+              >
+                🔐 API Secrets
+              </button>
+              <button
+                className="btn btn-demo"
+                onClick={() => {
+                  setSampleInput(generateSyntheticCorporateData());
+                  setDetections([]);
+                  setHighlighted('');
+                  setMasked('');
+                  setTokenMap(null);
+                  setResponse(null);
+                  setResponseRaw(null);
+                }}
+                title="Load synthetic corporate employee data"
+              >
+                🏢 Corporate Data
+              </button>
+            </div>
+          </div>
           <textarea
             className="input-textarea"
-            placeholder="Paste text here to scan for sensitive data..."
+            placeholder="Paste text here to scan for sensitive data... (or use demo buttons above)"
             value={input}
             onChange={(e) => setSampleInput(e.target.value)}
             rows={6}
@@ -206,13 +444,72 @@ export default function ShieldPage() {
             </div>
 
             {/* Action Buttons */}
-            {mode === 'warn' && (
+            <div className="section">
+              <div className="provider-row">
+                <label className="provider-label">Send to</label>
+                <select
+                  className="provider-select"
+                  value={provider}
+                  onChange={(e) => setProvider(e.target.value as 'ollama' | 'claude')}
+                  disabled={isSending}
+                >
+                  <option value="ollama">Ollama (local · qwen3:latest)</option>
+                  <option value="claude">Claude (Anthropic API)</option>
+                </select>
+              </div>
+              <div className="action-buttons">
+                <button
+                  className="btn btn-success"
+                  onClick={handleMaskAndSend}
+                  disabled={isSending || !masked}
+                >
+                  {isSending ? 'Sending…' : '✓ Mask & Send'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleEditManually}
+                  disabled={isSending || !masked}
+                >
+                  ✏️ Edit Manually
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={handleBlock}
+                  disabled={isSending}
+                >
+                  🚫 Block
+                </button>
+              </div>
+            </div>
+
+            {/* AI Response */}
+            {sendError && (
               <div className="section">
-                <div className="action-buttons">
-                  <button className="btn btn-success">✓ Mask & Send</button>
-                  <button className="btn btn-secondary">✏️ Edit Manually</button>
-                  <button className="btn btn-danger">🚫 Block</button>
+                <h3>Error</h3>
+                <div className="error-box">{sendError}</div>
+              </div>
+            )}
+
+            {response !== null && (
+              <div className="section">
+                <div className="response-header">
+                  <h3>AI Response (de-anonymized)</h3>
+                  <label className="toggle-raw">
+                    <input
+                      type="checkbox"
+                      checked={showRaw}
+                      onChange={(e) => setShowRaw(e.target.checked)}
+                    />
+                    <span>Show raw (with tokens)</span>
+                  </label>
                 </div>
+                <div className="preview response">
+                  {showRaw ? responseRaw : response}
+                </div>
+                <p className="response-note">
+                  Tokens like <code>[PHI_1]</code> were replaced back to your original values
+                  client-side after the AI replied. The AI never saw the raw data.
+                </p>
               </div>
             )}
           </>
@@ -314,6 +611,19 @@ export default function ShieldPage() {
           background: #3367d6;
         }
 
+        .btn-demo {
+          background: #e8f0fe;
+          color: #1a73e8;
+          padding: 8px 12px;
+          font-size: 12px;
+          border: 1px solid #b3d9f2;
+        }
+
+        .btn-demo:hover {
+          background: #d2e3fc;
+          border-color: #8ab4f8;
+        }
+
         .btn-success {
           background: #0f6e56;
           color: white;
@@ -372,6 +682,21 @@ export default function ShieldPage() {
           color: #633806;
         }
 
+        .badge-secret {
+          background: #eeedfe;
+          color: #4a148c;
+        }
+
+        .badge-financial {
+          background: #e1f5ee;
+          color: #00695c;
+        }
+
+        .badge-corporate {
+          background: #e3f2fd;
+          color: #0d47a1;
+        }
+
         .detection-type {
           font-size: 13px;
           font-weight: 500;
@@ -424,6 +749,87 @@ export default function ShieldPage() {
           display: flex;
           gap: 12px;
           justify-content: flex-end;
+        }
+
+        .btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .provider-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #eee;
+        }
+
+        .provider-label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #555;
+        }
+
+        .provider-select {
+          padding: 8px 12px;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          font-size: 14px;
+          background: white;
+          flex: 1;
+          max-width: 360px;
+        }
+
+        .response-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .response-header h3 {
+          margin: 0;
+        }
+
+        .toggle-raw {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: #666;
+          cursor: pointer;
+        }
+
+        .preview.response {
+          white-space: pre-wrap;
+          max-height: 480px;
+        }
+
+        .response-note {
+          margin: 12px 0 0;
+          font-size: 12px;
+          color: #888;
+          line-height: 1.5;
+        }
+
+        .response-note code {
+          background: #f1f5f9;
+          padding: 1px 6px;
+          border-radius: 3px;
+          font-size: 11px;
+        }
+
+        .error-box {
+          padding: 12px 16px;
+          background: #fee2e2;
+          color: #7f1d1d;
+          border: 1px solid #fca5a5;
+          border-radius: 6px;
+          font-size: 13px;
+          line-height: 1.5;
+          word-break: break-word;
         }
       `}</style>
     </div>
