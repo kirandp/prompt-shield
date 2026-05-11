@@ -44,10 +44,13 @@ function extOf(name: string): string {
 }
 
 async function extractPdf(buf: Buffer): Promise<string> {
-    const { PDFParse }: any = await import('pdf-parse');
-    const parser = new PDFParse({ data: new Uint8Array(buf) });
-    const result = await parser.getText();
-    return String(result?.text ?? '');
+    // unpdf is built for serverless: it bundles its own pdfjs build with the
+    // browser-global polyfills (DOMMatrix, Path2D, etc.) that bare pdfjs-dist
+    // needs. Works on Vercel out of the box.
+    const { extractText, getDocumentProxy } = await import('unpdf');
+    const pdf = await getDocumentProxy(new Uint8Array(buf));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return String(text ?? '');
 }
 
 async function extractDocx(buf: Buffer): Promise<string> {
