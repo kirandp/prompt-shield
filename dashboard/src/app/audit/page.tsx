@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase, subscribeToAuditEvents, isSupabaseConfigured } from '@/lib/supabase';
 import { DatePickerField } from '@/components/DatePickerField';
+import { InfoIcon } from '@/components/InfoIcon';
 
 type AuditEvent = {
   id: number | string;
@@ -193,8 +194,9 @@ export default function AuditPage() {
 
   const handleExportCSV = () => {
     const csv = [
-      ['Timestamp', 'User', 'Mode', 'Detections', 'Categories', 'Severity', 'Action', 'AI Tool'],
-      ...events.map((event) => [
+      ['#', 'Timestamp', 'User', 'Mode', 'Detections', 'Categories', 'Severity', 'Action', 'AI Tool'],
+      ...events.map((event, idx) => [
+        String(idx + 1),
         formatTs(event.timestamp),
         event.user_email ?? event.user_id ?? '',
         event.mode ?? '',
@@ -277,20 +279,41 @@ export default function AuditPage() {
       )}
 
       <div className="filters-bar">
-        <select value={filters.mode} onChange={(e) => setFilters({ ...filters, mode: e.target.value })}>
-          <option value="all">All Modes</option>
-          <option value="shadow">Shadow</option>
-          <option value="fix">Fix</option>
-          <option value="warn">Warn</option>
-        </select>
+        <span className="filter-with-info">
+          <select value={filters.mode} onChange={(e) => setFilters({ ...filters, mode: e.target.value })}>
+            <option value="all">All Modes</option>
+            <option value="shadow">Shadow</option>
+            <option value="fix">Fix</option>
+            <option value="warn">Warn</option>
+          </select>
+          <InfoIcon label="About protection modes">
+            <strong>Protection modes</strong>
+            <ul>
+              <li><strong>Shadow</strong> — detect only, prompt unchanged</li>
+              <li><strong>Fix</strong> — auto-mask before send</li>
+              <li><strong>Warn</strong> — confirm with user first</li>
+            </ul>
+          </InfoIcon>
+        </span>
 
-        <select value={filters.severity} onChange={(e) => setFilters({ ...filters, severity: e.target.value })}>
-          <option value="all">All Severities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
+        <span className="filter-with-info">
+          <select value={filters.severity} onChange={(e) => setFilters({ ...filters, severity: e.target.value })}>
+            <option value="all">All Severities</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <InfoIcon label="About severity levels">
+            <strong>Severity</strong> reflects the worst category found in a prompt:
+            <ul>
+              <li><strong>Critical</strong> — SSN, payment cards, secrets</li>
+              <li><strong>High</strong> — PHI, government IDs</li>
+              <li><strong>Medium</strong> — emails, phone numbers</li>
+              <li><strong>Low</strong> — names, job titles</li>
+            </ul>
+          </InfoIcon>
+        </span>
 
         <DatePickerField
           value={filters.startDate}
@@ -320,6 +343,7 @@ export default function AuditPage() {
         <table className="events-table">
           <thead>
             <tr>
+              <th className="col-sn">#</th>
               <th>Timestamp</th>
               <th>User</th>
               <th>Mode</th>
@@ -334,20 +358,21 @@ export default function AuditPage() {
           <tbody>
             {loading && events.length === 0 && (
               <tr>
-                <td colSpan={8} className="empty-state">Loading audit events…</td>
+                <td colSpan={9} className="empty-state">Loading audit events…</td>
               </tr>
             )}
 
             {!loading && events.length === 0 && (
               <tr>
-                <td colSpan={8} className="empty-state">
+                <td colSpan={9} className="empty-state">
                   No events match the current filters.
                 </td>
               </tr>
             )}
 
-            {events.map((event) => (
+            {events.map((event, idx) => (
               <tr key={event.id}>
+                <td className="col-sn">{idx + 1}</td>
                 <td>{formatTs(event.timestamp)}</td>
                 <td>{event.user_email ?? (event.user_id ? `${event.user_id.slice(0, 8)}…` : '—')}</td>
                 <td>{event.mode ? <span className={`badge mode-${event.mode}`}>{event.mode}</span> : '—'}</td>
@@ -448,6 +473,12 @@ export default function AuditPage() {
           background: #fff;
         }
 
+        .filter-with-info {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+
         .section {
           background: white;
           border: 1px solid #e0e0e0;
@@ -483,6 +514,13 @@ export default function AuditPage() {
 
         .events-table tbody tr:hover {
           background: #f9f9f9;
+        }
+
+        .events-table .col-sn {
+          width: 44px;
+          text-align: right;
+          color: #999;
+          font-variant-numeric: tabular-nums;
         }
 
         .empty-state {

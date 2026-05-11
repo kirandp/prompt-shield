@@ -8,6 +8,22 @@ import {
   generateSyntheticCorporateData,
 } from '@/lib/fakerData';
 import { insertAuditEvent } from '@/lib/supabase';
+import { InfoIcon } from '@/components/InfoIcon';
+
+const MODE_DESCRIPTIONS: Record<'shadow' | 'fix' | 'warn', { title: string; body: string }> = {
+  shadow: {
+    title: 'Shadow',
+    body: 'Detect-only. Logs detections to the audit trail but does NOT alter the prompt sent to the AI tool. Use this when tuning rules before enforcement.',
+  },
+  fix: {
+    title: 'Fix',
+    body: 'Auto-mask. Silently replaces detected sensitive data with placeholder tokens (e.g. [PHONE_1]) before the prompt reaches the AI. The user sees no warning.',
+  },
+  warn: {
+    title: 'Warn',
+    body: 'Confirm-before-send. Shows the user a warning with the detections and requires explicit confirmation before the (masked) prompt is sent.',
+  },
+};
 
 const SEVERITY_RANK: Record<string, number> = { low: 1, medium: 2, high: 3, critical: 4 };
 
@@ -318,16 +334,32 @@ export default function ShieldPage() {
       <div className="demo-container">
         {/* Mode Selector */}
         <div className="section">
-          <h3>Protection Mode</h3>
+          <h3>
+            Protection Mode{' '}
+            <InfoIcon label="About protection modes">
+              <strong>Three modes</strong> control how PromptShield reacts when sensitive data is detected:
+              <ul>
+                <li><strong>Shadow</strong> — log only, prompt unchanged</li>
+                <li><strong>Fix</strong> — auto-mask silently</li>
+                <li><strong>Warn</strong> — confirm with the user</li>
+              </ul>
+            </InfoIcon>
+          </h3>
           <div className="mode-tabs">
             {(['shadow', 'fix', 'warn'] as const).map(m => (
-              <button
-                key={m}
-                className={`tab ${mode === m ? 'active' : ''}`}
-                onClick={() => setMode(m)}
-              >
-                {m.charAt(0).toUpperCase() + m.slice(1)}
-              </button>
+              <span key={m} className="mode-tab-wrapper">
+                <button
+                  className={`tab ${mode === m ? 'active' : ''}`}
+                  onClick={() => setMode(m)}
+                >
+                  {MODE_DESCRIPTIONS[m].title}
+                </button>
+                <InfoIcon label={`About ${MODE_DESCRIPTIONS[m].title} mode`}>
+                  <strong>{MODE_DESCRIPTIONS[m].title}</strong>
+                  <br />
+                  {MODE_DESCRIPTIONS[m].body}
+                </InfoIcon>
+              </span>
             ))}
           </div>
         </div>
@@ -559,6 +591,13 @@ export default function ShieldPage() {
         .mode-tabs {
           display: flex;
           gap: 12px;
+          align-items: center;
+        }
+
+        .mode-tab-wrapper {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .tab {

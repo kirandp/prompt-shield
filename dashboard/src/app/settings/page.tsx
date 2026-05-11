@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { InfoIcon } from '@/components/InfoIcon';
 
 export default function SettingsPage() {
     const [settings, setSettings] = useState({
@@ -26,7 +27,18 @@ export default function SettingsPage() {
             <div className="settings-container">
                 {/* Policy Settings */}
                 <div className="section">
-                    <h3>Default Policy Profile</h3>
+                    <h3>
+                        Default Policy Profile{' '}
+                        <InfoIcon label="About policy profiles">
+                            <strong>Policy profiles</strong> are presets of detection rules tuned for a regulation:
+                            <ul>
+                                <li><strong>HIPAA</strong> — patient names, MRN, diagnoses, SSN</li>
+                                <li><strong>GDPR</strong> — names, emails, addresses, EU IDs</li>
+                                <li><strong>PCI-DSS</strong> — card numbers, CVVs, expiry</li>
+                                <li><strong>Strict</strong> — all of the above plus secrets and corporate data</li>
+                            </ul>
+                        </InfoIcon>
+                    </h3>
                     <select
                         value={settings.policyProfile}
                         onChange={(e) => setSettings({ ...settings, policyProfile: e.target.value })}
