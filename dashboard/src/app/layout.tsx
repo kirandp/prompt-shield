@@ -23,6 +23,7 @@ export default function RootLayout({
 
                         <ul className="nav-menu">
                             <li><a href="/shield">Shield Demo</a></li>
+                            <li><a href="/scanner">File Scanner</a></li>
                             <li><a href="/rules">Custom Rules</a></li>
                             <li><a href="/audit">Audit Log</a></li>
                             <li><a href="/dashboard">Analytics</a></li>
