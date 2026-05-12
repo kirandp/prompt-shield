@@ -5,6 +5,27 @@ import { supabase, subscribeToAuditEvents, isSupabaseConfigured } from '@/lib/su
 import { DatePickerField } from '@/components/DatePickerField';
 import { InfoIcon } from '@/components/InfoIcon';
 
+type ReplayDetection = {
+  id?: string;
+  text: string;
+  category: string;
+  severity: string;
+  description?: string;
+  start: number;
+  end: number;
+};
+
+type ReplayPayload = {
+  replay_available?: boolean;
+  original_prompt?: string | null;
+  masked_prompt?: string | null;
+  token_map?: Array<[string, string]> | null;
+  ai_response_raw?: string | null;
+  ai_response_rehydrated?: string | null;
+  provider?: string | null;
+  detections?: ReplayDetection[];
+};
+
 type AuditEvent = {
   id: number | string;
   timestamp: string;
@@ -17,7 +38,53 @@ type AuditEvent = {
   max_severity?: string | null;
   action_taken?: string | null;
   ai_tool?: string | null;
+  context_metadata?: ReplayPayload | null;
 };
+
+const CATEGORY_BG: Record<string, string> = {
+  PHI: '#FCEBEB',
+  PII: '#FAEEDA',
+  SECRET: '#EEEDFE',
+  FINANCIAL: '#E1F5EE',
+  CORPORATE: '#E3F2FD',
+};
+
+const CATEGORY_FG: Record<string, string> = {
+  PHI: '#A32D2D',
+  PII: '#633806',
+  SECRET: '#4A148C',
+  FINANCIAL: '#00695C',
+  CORPORATE: '#0D47A1',
+};
+
+function escapeHtml(text: string) {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+function renderHighlighted(text: string, detections: ReplayDetection[]) {
+  if (!text) return '';
+  if (!detections || detections.length === 0) return escapeHtml(text);
+  const sorted = [...detections].sort((a, b) => a.start - b.start);
+  let html = '';
+  let lastEnd = 0;
+  for (const d of sorted) {
+    if (d.start < lastEnd) continue;
+    html += escapeHtml(text.slice(lastEnd, d.start));
+    const bg = CATEGORY_BG[d.category] ?? '#E8E8E8';
+    const fg = CATEGORY_FG[d.category] ?? '#333';
+    html += `<mark style="background-color:${bg};color:${fg};padding:2px 4px;border-radius:3px;font-weight:600;">${escapeHtml(text.slice(d.start, d.end))}</mark>`;
+    lastEnd = d.end;
+  }
+  html += escapeHtml(text.slice(lastEnd));
+  return html;
+}
 
 const DEMO_EVENTS: AuditEvent[] = [
   {
@@ -68,6 +135,14 @@ export default function AuditPage() {
     endDate: '',
   });
 
+  const [replayEvent, setReplayEvent] = useState<AuditEvent | null>(null);
+  const [replayShowRaw, setReplayShowRaw] = useState(false);
+
+  // Pagination
+  const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+  const [pageSize, setPageSize] = useState(25);
+  const [page, setPage] = useState(1);
+
   const filtersRef = useRef(filters);
 
   useEffect(() => {
@@ -89,7 +164,7 @@ export default function AuditPage() {
       let query = supabase
         .from('audit_events')
         .select(
-          'id, timestamp, user_id, mode, event_type, detection_count, categories_found, max_severity, action_taken, ai_tool'
+          'id, timestamp, user_id, mode, event_type, detection_count, categories_found, max_severity, action_taken, ai_tool, context_metadata'
         )
         .order('timestamp', { ascending: false })
         .limit(200);
@@ -126,6 +201,7 @@ export default function AuditPage() {
         max_severity: row.max_severity,
         action_taken: row.action_taken,
         ai_tool: row.ai_tool,
+        context_metadata: row.context_metadata ?? null,
       }));
 
       const ids = Array.from(
@@ -163,6 +239,17 @@ export default function AuditPage() {
     fetchEvents();
   }, [fetchEvents]);
 
+  // Reset to page 1 whenever filters change or events refresh
+  useEffect(() => {
+    setPage(1);
+  }, [filters, pageSize, events.length]);
+
+  const totalPages = Math.max(1, Math.ceil(events.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const pageEnd = Math.min(pageStart + pageSize, events.length);
+  const pagedEvents = events.slice(pageStart, pageEnd);
+
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
@@ -195,6 +282,7 @@ export default function AuditPage() {
         max_severity: row.max_severity,
         action_taken: row.action_taken,
         ai_tool: row.ai_tool,
+        context_metadata: row.context_metadata ?? null,
       };
 
       setEvents((prev) => [mapped, ...prev].slice(0, 200));
@@ -363,27 +451,28 @@ export default function AuditPage() {
               <th>Severity</th>
               <th>Action</th>
               <th>AI Tool</th>
+              <th>Replay</th>
             </tr>
           </thead>
 
           <tbody>
             {loading && events.length === 0 && (
               <tr>
-                <td colSpan={9} className="empty-state">Loading audit events…</td>
+                <td colSpan={10} className="empty-state">Loading audit events…</td>
               </tr>
             )}
 
             {!loading && events.length === 0 && (
               <tr>
-                <td colSpan={9} className="empty-state">
+                <td colSpan={10} className="empty-state">
                   No events match the current filters.
                 </td>
               </tr>
             )}
 
-            {events.map((event, idx) => (
+            {pagedEvents.map((event, idx) => (
               <tr key={event.id}>
-                <td className="col-sn">{idx + 1}</td>
+                <td className="col-sn">{pageStart + idx + 1}</td>
                 <td>{formatTs(event.timestamp)}</td>
                 <td>{event.user_email ?? (event.user_id ? `${event.user_id.slice(0, 8)}…` : '—')}</td>
                 <td>{event.mode ? <span className={`badge mode-${event.mode}`}>{event.mode}</span> : '—'}</td>
@@ -412,11 +501,203 @@ export default function AuditPage() {
                   ) : '—'}
                 </td>
                 <td>{event.ai_tool ?? '—'}</td>
+                <td>
+                  {event.context_metadata?.replay_available ? (
+                    <button
+                      className="btn btn-replay"
+                      onClick={() => {
+                        setReplayShowRaw(false);
+                        setReplayEvent(event);
+                      }}
+                    >
+                      🎬 Replay
+                    </button>
+                  ) : (
+                    '—'
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+
+        {events.length > 0 && (
+          <div className="pagination-bar">
+            <div className="pagination-info">
+              Showing <strong>{events.length === 0 ? 0 : pageStart + 1}</strong>–
+              <strong>{pageEnd}</strong> of <strong>{events.length}</strong>
+            </div>
+
+            <div className="pagination-controls">
+              <label className="page-size-label">
+                Rows per page
+                <select
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
+                  aria-label="Rows per page"
+                >
+                  {PAGE_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="page-nav">
+                <button
+                  className="btn btn-secondary page-btn"
+                  onClick={() => setPage(1)}
+                  disabled={safePage === 1}
+                  aria-label="First page"
+                >
+                  «
+                </button>
+                <button
+                  className="btn btn-secondary page-btn"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  aria-label="Previous page"
+                >
+                  ‹ Prev
+                </button>
+                <span className="page-indicator">
+                  Page <strong>{safePage}</strong> of <strong>{totalPages}</strong>
+                </span>
+                <button
+                  className="btn btn-secondary page-btn"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  aria-label="Next page"
+                >
+                  Next ›
+                </button>
+                <button
+                  className="btn btn-secondary page-btn"
+                  onClick={() => setPage(totalPages)}
+                  disabled={safePage === totalPages}
+                  aria-label="Last page"
+                >
+                  »
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {replayEvent && replayEvent.context_metadata && (
+        <div
+          className="replay-backdrop"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setReplayEvent(null);
+          }}
+        >
+          <div className="replay-modal" role="dialog" aria-modal="true">
+            <div className="replay-header">
+              <div>
+                <h3>🎬 Time-Travel Replay</h3>
+                <p className="replay-meta">
+                  {formatTs(replayEvent.timestamp)} · mode <strong>{replayEvent.mode ?? '—'}</strong>
+                  {' · '}provider <strong>{replayEvent.context_metadata.provider ?? '—'}</strong>
+                  {' · '}session <code>{(replayEvent as any).session_id ?? '—'}</code>
+                </p>
+              </div>
+              <button className="btn btn-secondary" onClick={() => setReplayEvent(null)}>
+                ✕ Close
+              </button>
+            </div>
+
+            <div className="replay-grid">
+              <div className="replay-pane">
+                <div className="replay-pane-title">1. What the user typed</div>
+                <div
+                  className="preview replay-preview"
+                  dangerouslySetInnerHTML={{
+                    __html: renderHighlighted(
+                      replayEvent.context_metadata.original_prompt ?? '',
+                      replayEvent.context_metadata.detections ?? []
+                    ),
+                  }}
+                />
+              </div>
+
+              <div className="replay-pane">
+                <div className="replay-pane-title">2. What was detected</div>
+                <div className="preview replay-preview">
+                  {(replayEvent.context_metadata.detections ?? []).length === 0 ? (
+                    <em>No detections recorded.</em>
+                  ) : (
+                    <ul className="replay-detections">
+                      {(replayEvent.context_metadata.detections ?? []).map((d, i) => (
+                        <li key={i}>
+                          <span
+                            className="replay-cat"
+                            style={{
+                              background: CATEGORY_BG[d.category] ?? '#eee',
+                              color: CATEGORY_FG[d.category] ?? '#333',
+                            }}
+                          >
+                            {d.category}
+                          </span>
+                          <strong>{d.description ?? d.category}</strong>
+                          <code>{d.text}</code>
+                          <span className={`severity severity-${d.severity}`}>{d.severity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="replay-pane">
+                <div className="replay-pane-title">3. What the AI received (masked)</div>
+                <div className="preview replay-preview">
+                  {replayEvent.context_metadata.masked_prompt || <em>—</em>}
+                </div>
+                {(replayEvent.context_metadata.token_map ?? []).length > 0 && (
+                  <details className="replay-tokens">
+                    <summary>Token map ({replayEvent.context_metadata.token_map!.length})</summary>
+                    <table>
+                      <thead>
+                        <tr><th>Token</th><th>Original</th></tr>
+                      </thead>
+                      <tbody>
+                        {replayEvent.context_metadata.token_map!.map(([orig, tok], i) => (
+                          <tr key={i}>
+                            <td><code>{tok}</code></td>
+                            <td>{orig}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </details>
+                )}
+              </div>
+
+              <div className="replay-pane">
+                <div className="replay-pane-title">
+                  4. What the AI returned
+                  {(replayEvent.context_metadata.ai_response_raw ||
+                    replayEvent.context_metadata.ai_response_rehydrated) && (
+                    <label className="replay-toggle">
+                      <input
+                        type="checkbox"
+                        checked={replayShowRaw}
+                        onChange={(e) => setReplayShowRaw(e.target.checked)}
+                      />
+                      <span>{replayShowRaw ? 'Showing raw (tokens)' : 'Showing rehydrated'}</span>
+                    </label>
+                  )}
+                </div>
+                <div className="preview replay-preview">
+                  {replayShowRaw
+                    ? replayEvent.context_metadata.ai_response_raw || <em>No response captured.</em>
+                    : replayEvent.context_metadata.ai_response_rehydrated || <em>No response captured.</em>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx>{`
         .page {
@@ -612,6 +893,234 @@ export default function AuditPage() {
 
         .btn-link:hover {
           text-decoration: underline;
+        }
+
+        .pagination-bar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 12px 16px;
+          border-top: 1px solid #e0e0e0;
+          background: #fafafa;
+          flex-wrap: wrap;
+        }
+
+        .pagination-info {
+          font-size: 13px;
+          color: #475569;
+        }
+
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .page-size-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 13px;
+          color: #475569;
+        }
+
+        .page-size-label select {
+          padding: 6px 10px;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          font-size: 13px;
+          background: white;
+        }
+
+        .page-nav {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .page-btn {
+          padding: 6px 10px;
+          font-size: 13px;
+          min-width: 36px;
+        }
+
+        .page-indicator {
+          font-size: 13px;
+          color: #475569;
+          padding: 0 4px;
+        }
+
+        .btn-replay {
+          background: #ede9fe;
+          border-color: #c4b5fd;
+          color: #5b21b6;
+          padding: 6px 10px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .btn-replay:hover {
+          background: #ddd6fe;
+          border-color: #8b5cf6;
+        }
+
+        .replay-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 24px;
+        }
+
+        .replay-modal {
+          background: white;
+          width: 100%;
+          max-width: 1100px;
+          max-height: 90vh;
+          overflow-y: auto;
+          border-radius: 12px;
+          padding: 24px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .replay-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #e0e0e0;
+        }
+
+        .replay-header h3 {
+          margin: 0 0 4px;
+          font-size: 18px;
+          font-weight: 600;
+        }
+
+        .replay-meta {
+          margin: 0;
+          font-size: 12px;
+          color: #666;
+        }
+
+        .replay-meta code {
+          background: #f1f5f9;
+          padding: 1px 6px;
+          border-radius: 3px;
+          font-size: 11px;
+        }
+
+        .replay-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        .replay-pane-title {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          font-size: 12px;
+          font-weight: 700;
+          color: #5b21b6;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 6px;
+        }
+
+        .replay-preview {
+          padding: 12px;
+          background: #f9f9f9;
+          border: 1px solid #e0e0e0;
+          border-radius: 6px;
+          font-family: monospace;
+          font-size: 12px;
+          line-height: 1.55;
+          max-height: 240px;
+          overflow-y: auto;
+          white-space: pre-wrap;
+          word-break: break-word;
+        }
+
+        .replay-toggle {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 11px;
+          font-weight: 500;
+          color: #666;
+          text-transform: none;
+          letter-spacing: normal;
+          cursor: pointer;
+        }
+
+        .replay-detections {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .replay-detections li {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: -apple-system, sans-serif;
+          font-size: 12px;
+        }
+
+        .replay-detections code {
+          background: #fff;
+          border: 1px solid #e0e0e0;
+          padding: 2px 6px;
+          border-radius: 3px;
+        }
+
+        .replay-cat {
+          padding: 2px 6px;
+          border-radius: 3px;
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .replay-tokens {
+          margin-top: 8px;
+          font-size: 12px;
+        }
+
+        .replay-tokens summary {
+          cursor: pointer;
+          color: #5b21b6;
+          font-weight: 600;
+        }
+
+        .replay-tokens table {
+          width: 100%;
+          margin-top: 8px;
+          border-collapse: collapse;
+        }
+
+        .replay-tokens th,
+        .replay-tokens td {
+          padding: 6px 8px;
+          text-align: left;
+          border-bottom: 1px solid #eee;
+          font-size: 11px;
+        }
+
+        @media (max-width: 760px) {
+          .replay-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>

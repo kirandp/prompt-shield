@@ -9,6 +9,7 @@ import {
 } from '@/lib/fakerData';
 import { insertAuditEvent } from '@/lib/supabase';
 import { InfoIcon } from '@/components/InfoIcon';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const MODE_DESCRIPTIONS: Record<'shadow' | 'fix' | 'warn', { title: string; body: string }> = {
   shadow: {
@@ -217,6 +218,24 @@ export default function ShieldPage() {
   const [showRaw, setShowRaw] = useState(false);
   const [reportSuccess, setReportSuccess] = useState(false);
 
+  // Safer-rewrite suggestion state
+  const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const [rewriteSuggestion, setRewriteSuggestion] = useState<string | null>(null);
+  const [rewriteChanges, setRewriteChanges] = useState<string[]>([]);
+
+  type ConfirmState = {
+    open: boolean;
+    title: string;
+    message: React.ReactNode;
+    confirmLabel: string;
+    variant: 'primary' | 'success' | 'warning' | 'danger';
+    onConfirm: () => void;
+  } | null;
+  const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const closeConfirm = () => setConfirm(null);
+  const runConfirm = (next: NonNullable<ConfirmState>) => setConfirm({ ...next, open: true });
+
   const [sessionId] = useState(
     () => `shield_${Math.random().toString(36).slice(2, 10)}`
   );
@@ -265,8 +284,9 @@ export default function ShieldPage() {
       if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
 
       const raw = String(data?.content ?? '');
+      const rehydrated = deanonymize(raw, tokenMap);
       setResponseRaw(raw);
-      setResponse(deanonymize(raw, tokenMap));
+      setResponse(rehydrated);
 
       void insertAuditEvent({
         event_type: 'masked',
@@ -275,12 +295,105 @@ export default function ShieldPage() {
         ai_tool: provider,
         session_id: sessionId,
         ...summarizeDetections(detections),
+        context_metadata: {
+          replay_available: true,
+          original_prompt: input,
+          masked_prompt: masked,
+          token_map: tokenMap ? Array.from(tokenMap.entries()) : [],
+          ai_response_raw: raw,
+          ai_response_rehydrated: rehydrated,
+          provider,
+          detections: detections.map((d) => ({
+            id: d.id,
+            text: d.text,
+            category: d.category,
+            severity: d.severity,
+            description: d.description,
+            start: d.start,
+            end: d.end,
+          })),
+        },
       });
     } catch (e: any) {
       setSendError(e?.message ?? 'Request failed');
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleSuggestRewrite = async () => {
+    if (!input.trim()) return;
+    setRewriteLoading(true);
+    setRewriteError(null);
+    setRewriteSuggestion(null);
+    setRewriteChanges([]);
+
+    try {
+      const categories = Array.from(new Set(detections.map((d) => d.category)));
+      const res = await fetch('/api/rewrite', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ provider, prompt: input, categories }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
+
+      const rewritten = String(data?.rewritten ?? '').trim();
+      const changes = Array.isArray(data?.changes_summary) ? data.changes_summary : [];
+      if (!rewritten) throw new Error('Model returned an empty rewrite');
+
+      setRewriteSuggestion(rewritten);
+      setRewriteChanges(changes);
+
+      void insertAuditEvent({
+        event_type: 'rewrite_suggested',
+        mode,
+        action_taken: 'rewrite_suggested',
+        ai_tool: provider,
+        session_id: sessionId,
+        ...summarizeDetections(detections),
+      });
+    } catch (e: any) {
+      setRewriteError(e?.message ?? 'Rewrite failed');
+    } finally {
+      setRewriteLoading(false);
+    }
+  };
+
+  const handleApplyRewrite = () => {
+    if (!rewriteSuggestion) return;
+    const applied = rewriteSuggestion;
+
+    void insertAuditEvent({
+      event_type: 'rewrite_applied',
+      mode,
+      action_taken: 'rewrite_applied',
+      ai_tool: provider,
+      session_id: sessionId,
+      ...summarizeDetections(detections),
+    });
+
+    setSampleInput(applied);
+    setRewriteSuggestion(null);
+    setRewriteChanges([]);
+    setRewriteError(null);
+
+    // Re-scan the applied text so the user sees the new (hopefully clean) state
+    const found = detectSensitiveData(applied);
+    const { masked: maskedText, tokenMap: map } = buildMasked(applied, found);
+    setDetections(found);
+    setHighlighted(buildHighlighted(applied, found));
+    setMasked(maskedText);
+    setTokenMap(map);
+    setResponse(null);
+    setResponseRaw(null);
+    setSendError(null);
+  };
+
+  const handleDismissRewrite = () => {
+    setRewriteSuggestion(null);
+    setRewriteChanges([]);
+    setRewriteError(null);
   };
 
   const handleEditManually = () => {
@@ -312,6 +425,24 @@ export default function ShieldPage() {
         action_taken: 'reported',
         session_id: sessionId,
         ...summarizeDetections(detections),
+        context_metadata: {
+          replay_available: true,
+          original_prompt: input,
+          masked_prompt: masked,
+          token_map: tokenMap ? Array.from(tokenMap.entries()) : [],
+          ai_response_raw: responseRaw,
+          ai_response_rehydrated: response,
+          provider,
+          detections: detections.map((d) => ({
+            id: d.id,
+            text: d.text,
+            category: d.category,
+            severity: d.severity,
+            description: d.description,
+            start: d.start,
+            end: d.end,
+          })),
+        },
       });
     }
 
@@ -479,6 +610,84 @@ export default function ShieldPage() {
               <div className="preview highlighted" dangerouslySetInnerHTML={{ __html: highlighted }} />
             </div>
 
+            {/* Safer Rewrite Suggestion */}
+            <div className="section rewrite-section">
+              <div className="rewrite-header">
+                <div>
+                  <h3 style={{ margin: 0 }}>✨ Safer Rewrite</h3>
+                  <p className="rewrite-tagline">
+                    Let the AI propose a generic version of this prompt that keeps the intent but drops the identifiers.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={handleSuggestRewrite}
+                  disabled={rewriteLoading || !input.trim()}
+                >
+                  {rewriteLoading ? 'Thinking…' : '✨ Suggest Safer Rewrite'}
+                </button>
+              </div>
+
+              {rewriteError && (
+                <div className="error-box" style={{ marginTop: 12 }}>{rewriteError}</div>
+              )}
+
+              {rewriteSuggestion && (
+                <div className="rewrite-result">
+                  <div className="rewrite-grid">
+                    <div className="rewrite-col">
+                      <div className="rewrite-col-title">Original</div>
+                      <div className="preview rewrite-pane original">{input}</div>
+                    </div>
+                    <div className="rewrite-col">
+                      <div className="rewrite-col-title">Suggested rewrite</div>
+                      <div className="preview rewrite-pane suggested">{rewriteSuggestion}</div>
+                    </div>
+                  </div>
+
+                  {rewriteChanges.length > 0 && (
+                    <div className="rewrite-changes">
+                      <strong>What changed:</strong>
+                      <ul>
+                        {rewriteChanges.map((c, i) => (
+                          <li key={i}>{c}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="rewrite-actions">
+                    <button
+                      className="btn btn-success"
+                      onClick={() =>
+                        runConfirm({
+                          open: true,
+                          title: 'Apply the suggested rewrite?',
+                          message: (
+                            <>
+                              Your input will be replaced with the safer rewrite and re-scanned
+                              automatically. The current detection state will be cleared.
+                            </>
+                          ),
+                          confirmLabel: '✓ Apply & Re-scan',
+                          variant: 'success',
+                          onConfirm: () => {
+                            closeConfirm();
+                            handleApplyRewrite();
+                          },
+                        })
+                      }
+                    >
+                      ✓ Apply &amp; Re-scan
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleDismissRewrite}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Masked Preview */}
             <div className="section">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -543,7 +752,25 @@ export default function ShieldPage() {
                 </div>
                 <button
                   className="btn btn-warning"
-                  onClick={handleReportIncident}
+                  onClick={() =>
+                    runConfirm({
+                      open: true,
+                      title: 'Report this prompt as an incident?',
+                      message: (
+                        <>
+                          This will log the prompt, its detections, and any AI response to the
+                          audit trail for security review. The replay payload will be available
+                          on the Audit Log page.
+                        </>
+                      ),
+                      confirmLabel: '🚨 Report Incident',
+                      variant: 'warning',
+                      onConfirm: () => {
+                        closeConfirm();
+                        handleReportIncident();
+                      },
+                    })
+                  }
                   disabled={isSending || detections.length === 0}
                 >
                   🚨 Report Incident
@@ -568,14 +795,49 @@ export default function ShieldPage() {
               <div className="action-buttons">
                 <button
                   className="btn btn-success"
-                  onClick={handleMaskAndSend}
+                  onClick={() =>
+                    runConfirm({
+                      open: true,
+                      title: 'Send masked prompt to AI?',
+                      message: (
+                        <>
+                          The masked prompt (tokens like <code>[PHI_1]</code>) will be sent to{' '}
+                          <strong>{provider === 'claude' ? 'Claude' : 'Ollama (local)'}</strong>.
+                          The original sensitive values never leave your browser.
+                        </>
+                      ),
+                      confirmLabel: '✓ Send',
+                      variant: 'success',
+                      onConfirm: () => {
+                        closeConfirm();
+                        void handleMaskAndSend();
+                      },
+                    })
+                  }
                   disabled={isSending || !masked}
                 >
                   {isSending ? 'Sending…' : '✓ Mask & Send'}
                 </button>
                 <button
                   className="btn btn-secondary"
-                  onClick={handleEditManually}
+                  onClick={() =>
+                    runConfirm({
+                      open: true,
+                      title: 'Edit masked prompt manually?',
+                      message: (
+                        <>
+                          The masked text will replace your input so you can tweak it further
+                          before sending. Current detections will be cleared.
+                        </>
+                      ),
+                      confirmLabel: '✏️ Edit',
+                      variant: 'primary',
+                      onConfirm: () => {
+                        closeConfirm();
+                        handleEditManually();
+                      },
+                    })
+                  }
                   disabled={isSending || !masked}
                 >
                   ✏️ Edit Manually
@@ -622,6 +884,16 @@ export default function ShieldPage() {
         )}
       </div>
 
+      <ConfirmDialog
+        open={!!confirm?.open}
+        title={confirm?.title ?? ''}
+        message={confirm?.message ?? ''}
+        confirmLabel={confirm?.confirmLabel}
+        variant={confirm?.variant}
+        onConfirm={confirm?.onConfirm ?? closeConfirm}
+        onCancel={closeConfirm}
+      />
+
       <style jsx>{`
         .page {
           padding: 24px;
@@ -665,6 +937,85 @@ export default function ShieldPage() {
         .section.report-incident-section {
           background: #fff8e1;
           border: 1px solid #ffcc80;
+        }
+
+        .section.rewrite-section {
+          background: #f3e8ff;
+          border: 1px solid #c4a5ee;
+        }
+
+        .rewrite-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .rewrite-header h3 {
+          color: #5b21b6;
+        }
+
+        .rewrite-tagline {
+          margin: 4px 0 0;
+          font-size: 13px;
+          color: #5b3d8a;
+        }
+
+        .rewrite-result {
+          margin-top: 16px;
+        }
+
+        .rewrite-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .rewrite-col-title {
+          font-size: 12px;
+          font-weight: 600;
+          color: #5b21b6;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 6px;
+        }
+
+        .rewrite-pane {
+          white-space: pre-wrap;
+          word-break: normal;
+          background: white;
+          border: 1px solid #e0d4f5;
+        }
+
+        .rewrite-pane.suggested {
+          background: #f6efff;
+          border-color: #b388eb;
+        }
+
+        .rewrite-changes {
+          margin-top: 12px;
+          padding: 10px 14px;
+          background: #faf5ff;
+          border-left: 3px solid #8b5cf6;
+          border-radius: 4px;
+          font-size: 13px;
+          color: #5b21b6;
+        }
+
+        .rewrite-changes ul {
+          margin: 6px 0 0;
+          padding-left: 18px;
+        }
+
+        .rewrite-actions {
+          display: flex;
+          gap: 12px;
+          margin-top: 14px;
+        }
+
+        @media (max-width: 720px) {
+          .rewrite-grid { grid-template-columns: 1fr; }
         }
 
         .report-incident-row {
