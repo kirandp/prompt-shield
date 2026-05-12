@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase, isSupabaseConfigured, fetchAuditStats, fetchOrgRules, getDemoOrgId } from '@/lib/supabase';
-import { SanitizationFlow } from '../components/SanitizationFlow';
-import { ComplianceLedger } from '../components/ComplianceLedger';
 
 export default function DashboardPage() {
     const [detectionData, setDetectionData] = useState<any[]>([]);
@@ -82,10 +80,6 @@ export default function DashboardPage() {
                 <h2>Analytics Dashboard</h2>
                 <p>Compliance metrics and detection trends {!isSupabaseConfigured && '(Demo Mode)'}</p>
             </div>
-
-            {/* New Theme Components */}
-            <SanitizationFlow />
-            <ComplianceLedger />
 
             {/* Metric Cards */}
             <div className="metrics-grid">
