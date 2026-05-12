@@ -544,7 +544,7 @@ export default function AuditPage() {
 
               <div className="page-nav">
                 <button
-                  className="btn btn-secondary page-btn"
+                  className="page-btn"
                   onClick={() => setPage(1)}
                   disabled={safePage === 1}
                   aria-label="First page"
@@ -552,7 +552,7 @@ export default function AuditPage() {
                   «
                 </button>
                 <button
-                  className="btn btn-secondary page-btn"
+                  className="page-btn"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={safePage === 1}
                   aria-label="Previous page"
@@ -563,7 +563,7 @@ export default function AuditPage() {
                   Page <strong>{safePage}</strong> of <strong>{totalPages}</strong>
                 </span>
                 <button
-                  className="btn btn-secondary page-btn"
+                  className="page-btn"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={safePage === totalPages}
                   aria-label="Next page"
@@ -571,7 +571,7 @@ export default function AuditPage() {
                   Next ›
                 </button>
                 <button
-                  className="btn btn-secondary page-btn"
+                  className="page-btn"
                   onClick={() => setPage(totalPages)}
                   disabled={safePage === totalPages}
                   aria-label="Last page"
@@ -924,32 +924,106 @@ export default function AuditPage() {
           gap: 8px;
           font-size: 13px;
           color: #475569;
+          white-space: nowrap;
+          flex-shrink: 0;
         }
 
-        .page-size-label select {
-          padding: 6px 10px;
-          border: 1px solid #e0e0e0;
+        .pagination-bar .page-size-label select {
+          height: 32px;
+          width: 72px;
+          min-width: 72px;
+          padding: 0 28px 0 10px;
+          border: 1px solid #d1d5db;
           border-radius: 6px;
           font-size: 13px;
-          background: white;
+          background-color: #ffffff !important;
+          color: #1f2937 !important;
+          cursor: pointer;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%236b7280' d='M0 0l5 6 5-6z'/></svg>");
+          background-repeat: no-repeat;
+          background-position: right 10px center;
+          background-size: 10px 6px;
+        }
+
+        .pagination-bar .page-size-label select option {
+          color: #1f2937;
+          background-color: #ffffff;
+        }
+
+        .page-size-label select:hover {
+          border-color: #94a3b8;
         }
 
         .page-nav {
-          display: flex;
-          align-items: center;
-          gap: 6px;
+          display: inline-flex;
+          align-items: stretch;
+          background: white;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          overflow: hidden;
         }
 
         .page-btn {
-          padding: 6px 10px;
-          font-size: 13px;
+          height: 32px;
           min-width: 36px;
+          padding: 0 12px;
+          background: white;
+          border: none;
+          border-right: 1px solid #e5e7eb;
+          color: #334155;
+          font-size: 13px;
+          font-weight: 500;
+          line-height: 1;
+          cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .page-btn:last-child {
+          border-right: none;
+        }
+
+        .page-btn:hover:not(:disabled) {
+          background: #eef2ff;
+          color: #1d4ed8;
+        }
+
+        .page-btn:active:not(:disabled) {
+          background: #e0e7ff;
+        }
+
+        .page-btn:disabled {
+          color: #cbd5e1;
+          background: #f8fafc;
+          cursor: not-allowed;
+        }
+
+        .page-btn:focus-visible {
+          outline: 2px solid #6366f1;
+          outline-offset: -2px;
+          z-index: 1;
         }
 
         .page-indicator {
+          display: inline-flex;
+          align-items: center;
+          height: 32px;
+          padding: 0 12px;
+          border-right: 1px solid #e5e7eb;
+          background: #f9fafb;
           font-size: 13px;
           color: #475569;
-          padding: 0 4px;
+          white-space: nowrap;
+        }
+
+        .page-indicator strong {
+          color: #1f2937;
+          margin: 0 2px;
         }
 
         .btn-replay {
