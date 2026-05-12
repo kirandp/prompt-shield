@@ -198,46 +198,68 @@ ALTER TABLE siem_integrations ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 -- RLS Policies
 -- ============================================================================
+-- Lookups go through SECURITY DEFINER helpers so policies on `users` can't
+-- recurse into themselves (prior versions of these policies caused
+-- "infinite recursion detected in policy for relation 'users'").
 
--- Users can only see their own organization's data
+CREATE OR REPLACE FUNCTION public.current_user_org_id()
+RETURNS UUID
+LANGUAGE SQL
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT org_id FROM public.users WHERE id = auth.uid() LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.current_user_is_admin()
+RETURNS BOOLEAN
+LANGUAGE SQL
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT COALESCE(
+    (SELECT role IN ('admin', 'security_officer')
+       FROM public.users WHERE id = auth.uid() LIMIT 1),
+    FALSE
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.current_user_org_id()   TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.current_user_is_admin() TO anon, authenticated;
+
+-- Users can read their own row, and any peer in the same org (so embedded
+-- `users(email)` joins work in the audit log).
+CREATE POLICY "Users read profiles in same org"
+  ON users FOR SELECT
+  USING (
+    id = auth.uid()
+    OR org_id = public.current_user_org_id()
+  );
+
 CREATE POLICY "Users see own org audit events"
   ON audit_events FOR SELECT
-  USING (org_id IN (SELECT org_id FROM users WHERE id = auth.uid()));
+  USING (org_id = public.current_user_org_id());
 
 CREATE POLICY "Users see own org rules"
   ON org_rules FOR SELECT
-  USING (org_id IN (SELECT org_id FROM users WHERE id = auth.uid()));
+  USING (org_id = public.current_user_org_id());
 
 CREATE POLICY "Users see own org policies"
   ON policy_profiles FOR SELECT
-  USING (org_id IN (SELECT org_id FROM users WHERE id = auth.uid()));
+  USING (org_id = public.current_user_org_id());
 
 CREATE POLICY "Users see own org SIEM integrations"
   ON siem_integrations FOR SELECT
-  USING (org_id IN (SELECT org_id FROM users WHERE id = auth.uid()));
+  USING (org_id = public.current_user_org_id());
 
--- Admins can insert rules
 CREATE POLICY "Admins can insert rules"
   ON org_rules FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users
-      WHERE id = auth.uid()
-      AND role IN ('admin', 'security_officer')
-      AND org_id = org_rules.org_id
-    )
+    public.current_user_is_admin()
+    AND org_id = public.current_user_org_id()
   );
-
--- Users can read their own profile
-CREATE POLICY "Users read own profile"
-  ON users FOR SELECT
-  USING (id = auth.uid() OR 
-         EXISTS (
-           SELECT 1 FROM users admin_check
-           WHERE admin_check.id = auth.uid()
-           AND admin_check.role IN ('admin', 'security_officer')
-           AND admin_check.org_id = users.org_id
-         ));
 
 -- ============================================================================
 -- Realtime Subscriptions
