@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 380" width="920" height="380" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12">
+  <rect width="920" height="380" fill="#ffffff"/>
+
+  <text x="460" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">Technology Stack</text>
+
+  <rect x="20" y="55" width="290" height="305" rx="10" fill="#eff6ff" stroke="#4285f4" stroke-width="1.5"/>
+  <text x="165" y="80" text-anchor="middle" font-weight="700" fill="#1e3a8a" font-size="14">EXTENSION</text>
+
+  <rect x="35" y="100" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="97" y="120" text-anchor="middle" font-size="11" fill="#1e3a8a">Manifest V3</text>
+  <rect x="170" y="100" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="232" y="120" text-anchor="middle" font-size="11" fill="#1e3a8a">Vanilla ES2022</text>
+  <rect x="35" y="140" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="97" y="160" text-anchor="middle" font-size="11" fill="#1e3a8a">Service Worker</text>
+  <rect x="170" y="140" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="232" y="160" text-anchor="middle" font-size="11" fill="#1e3a8a">chrome.storage</text>
+  <rect x="35" y="180" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="97" y="200" text-anchor="middle" font-size="11" fill="#1e3a8a">RegExp engine</text>
+  <rect x="170" y="180" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="232" y="200" text-anchor="middle" font-size="11" fill="#1e3a8a">MutationObserver</text>
+  <rect x="35" y="220" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="97" y="240" text-anchor="middle" font-size="11" fill="#1e3a8a">Shadow DOM (overlay)</text>
+  <rect x="170" y="220" width="125" height="30" rx="4" fill="#fff" stroke="#60a5fa"/>
+  <text x="232" y="240" text-anchor="middle" font-size="11" fill="#1e3a8a">Clipboard API</text>
+
+  <text x="165" y="280" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">Optional / Roadmap</text>
+  <rect x="35" y="290" width="125" height="28" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="97" y="309" text-anchor="middle" font-size="10" fill="#475569">Anthropic API (semantic)</text>
+  <rect x="170" y="290" width="125" height="28" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="232" y="309" text-anchor="middle" font-size="10" fill="#475569">spaCy + WASM (NER)</text>
+
+  <rect x="320" y="55" width="290" height="305" rx="10" fill="#dcfce7" stroke="#3ECF8E" stroke-width="1.5"/>
+  <text x="465" y="80" text-anchor="middle" font-weight="700" fill="#14532d" font-size="14">BACKEND</text>
+
+  <rect x="335" y="100" width="125" height="30" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="397" y="120" text-anchor="middle" font-size="11" fill="#14532d">Supabase</text>
+  <rect x="470" y="100" width="125" height="30" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="532" y="120" text-anchor="middle" font-size="11" fill="#14532d">Postgres 15+</text>
+  <rect x="335" y="140" width="125" height="30" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="397" y="160" text-anchor="middle" font-size="11" fill="#14532d">Row-Level Security</text>
+  <rect x="470" y="140" width="125" height="30" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="532" y="160" text-anchor="middle" font-size="11" fill="#14532d">Supabase Auth</text>
+  <rect x="335" y="180" width="125" height="30" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="397" y="200" text-anchor="middle" font-size="11" fill="#14532d">PostgREST API</text>
+  <rect x="470" y="180" width="125" height="30" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="532" y="200" text-anchor="middle" font-size="11" fill="#14532d">Realtime (WebSocket)</text>
+
+  <text x="465" y="240" text-anchor="middle" font-size="11" font-weight="700" fill="#14532d">Schema highlights</text>
+  <text x="465" y="260" text-anchor="middle" font-size="10" fill="#15803d">organisations · users · audit_events</text>
+  <text x="465" y="276" text-anchor="middle" font-size="10" fill="#15803d">rules · policies · sessions</text>
+
+  <text x="465" y="306" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">Optional / Roadmap</text>
+  <rect x="335" y="316" width="125" height="28" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="397" y="335" text-anchor="middle" font-size="10" fill="#475569">SIEM webhooks</text>
+  <rect x="470" y="316" width="125" height="28" rx="4" fill="#f1f5f9" stroke="#94a3b8"/>
+  <text x="532" y="335" text-anchor="middle" font-size="10" fill="#475569">Edge Functions</text>
+
+  <rect x="620" y="55" width="290" height="305" rx="10" fill="#ecfdf5" stroke="#0f6e56" stroke-width="1.5"/>
+  <text x="765" y="80" text-anchor="middle" font-weight="700" fill="#064e3b" font-size="14">DASHBOARD</text>
+
+  <rect x="635" y="100" width="125" height="30" rx="4" fill="#fff" stroke="#10b981"/>
+  <text x="697" y="120" text-anchor="middle" font-size="11" fill="#064e3b">Next.js 14 (App)</text>
+  <rect x="770" y="100" width="125" height="30" rx="4" fill="#fff" stroke="#10b981"/>
+  <text x="832" y="120" text-anchor="middle" font-size="11" fill="#064e3b">React 18</text>
+  <rect x="635" y="140" width="125" height="30" rx="4" fill="#fff" stroke="#10b981"/>
+  <text x="697" y="160" text-anchor="middle" font-size="11" fill="#064e3b">TypeScript</text>
+  <rect x="770" y="140" width="125" height="30" rx="4" fill="#fff" stroke="#10b981"/>
+  <text x="832" y="160" text-anchor="middle" font-size="11" fill="#064e3b">CSS Modules + JSX</text>
+  <rect x="635" y="180" width="125" height="30" rx="4" fill="#fff" stroke="#10b981"/>
+  <text x="697" y="200" text-anchor="middle" font-size="11" fill="#064e3b">supabase-js</text>
+  <rect x="770" y="180" width="125" height="30" rx="4" fill="#fff" stroke="#10b981"/>
+  <text x="832" y="200" text-anchor="middle" font-size="11" fill="#064e3b">Server Components</text>
+
+  <text x="765" y="240" text-anchor="middle" font-size="11" font-weight="700" fill="#064e3b">Routes</text>
+  <text x="765" y="258" text-anchor="middle" font-size="10" fill="#065f46">/dashboard · /audit · /rules</text>
+  <text x="765" y="274" text-anchor="middle" font-size="10" fill="#065f46">/shield · /settings</text>
+
+  <text x="765" y="306" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">Deploys</text>
+  <rect x="635" y="316" width="125" height="28" rx="4" fill="#f1f5f9" stroke="#10b981"/>
+  <text x="697" y="335" text-anchor="middle" font-size="10" fill="#475569">Vercel</text>
+  <rect x="770" y="316" width="125" height="28" rx="4" fill="#f1f5f9" stroke="#10b981"/>
+  <text x="832" y="335" text-anchor="middle" font-size="10" fill="#475569">Self-host (Docker)</text>
+</svg>

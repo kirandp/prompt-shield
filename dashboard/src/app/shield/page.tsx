@@ -324,6 +324,27 @@ export default function ShieldPage() {
     setSendError(null);
   };
 
+  const handleReportIncident = () => {
+    if (detections.length > 0) {
+      void insertAuditEvent({
+        event_type: 'incident_report',
+        mode,
+        action_taken: 'reported',
+        session_id: sessionId,
+        ...summarizeDetections(detections),
+      });
+    }
+
+    setSampleInput('');
+    setDetections([]);
+    setHighlighted('');
+    setMasked('');
+    setTokenMap(null);
+    setResponse(null);
+    setResponseRaw(null);
+    setSendError(null);
+  };
+
   return (
     <div className="page">
       <div className="page-header">
@@ -505,6 +526,13 @@ export default function ShieldPage() {
                   ✏️ Edit Manually
                 </button>
                 <button
+                  className="btn btn-warning"
+                  onClick={handleReportIncident}
+                  disabled={isSending || detections.length === 0}
+                >
+                  🚨 Report Incident
+                </button>
+                <button
                   className="btn btn-danger"
                   onClick={handleBlock}
                   disabled={isSending}
@@ -665,6 +693,11 @@ export default function ShieldPage() {
 
         .btn-success {
           background: #0f6e56;
+          color: white;
+        }
+
+        .btn-warning {
+          background: #f57c00;
           color: white;
         }
 

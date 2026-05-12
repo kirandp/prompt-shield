@@ -56,9 +56,7 @@ policySelect.addEventListener('change', () => {
 
 // Dashboard button
 dashboardBtn.addEventListener('click', () => {
-    const dashboardUrl = chrome.runtime.getURL('../../../dashboard/index.html');
-    chrome.tabs.create({ url: 'about:blank' });
-    // In production, this would link to the actual Next.js dashboard at localhost:3000
+    chrome.tabs.create({ url: 'https://prompt-shield-kdp.vercel.app/shield' });
 });
 
 // Pause button

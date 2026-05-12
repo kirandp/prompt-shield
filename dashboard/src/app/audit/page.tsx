@@ -42,6 +42,17 @@ const DEMO_EVENTS: AuditEvent[] = [
     action_taken: 'blocked',
     ai_tool: 'claude',
   },
+  {
+    id: 'demo-3',
+    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+    user_email: 'demo-user-3@example.com',
+    mode: 'shadow',
+    detection_count: 7,
+    categories_found: ['FINANCIAL', 'SECRET', 'PHI'],
+    max_severity: 'critical',
+    action_taken: 'reported',
+    ai_tool: undefined,
+  },
 ];
 
 export default function AuditPage() {
@@ -393,7 +404,13 @@ export default function AuditPage() {
                     </span>
                   ) : '—'}
                 </td>
-                <td>{event.action_taken ?? '—'}</td>
+                <td>
+                  {event.action_taken ? (
+                    <span className={`badge action-${event.action_taken.toLowerCase()}`}>
+                      {event.action_taken}
+                    </span>
+                  ) : '—'}
+                </td>
                 <td>{event.ai_tool ?? '—'}</td>
               </tr>
             ))}
@@ -542,6 +559,12 @@ export default function AuditPage() {
         .mode-shadow { background: #e3f2fd; color: #1976d2; }
         .mode-fix { background: #e8f5e9; color: #388e3c; }
         .mode-warn { background: #fff3e0; color: #f57c00; }
+
+        .action-masked { background: #e8f5e9; color: #388e3c; }
+        .action-blocked { background: #ffebee; color: #c62828; }
+        .action-reported { background: #fff3e0; color: #e65100; }
+        .action-detected { background: #e3f2fd; color: #1976d2; }
+        .action-edited { background: #f3e5f5; color: #6a1b9a; }
 
         .cat-phi { background: #fcebeb; color: #a32d2d; }
         .cat-pii { background: #faeeda; color: #633806; }

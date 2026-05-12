@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 540" width="940" height="540" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="13">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3ECF8E"/>
+    </marker>
+  </defs>
+
+  <rect width="940" height="540" fill="#ffffff"/>
+
+  <text x="470" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">PromptShield — System Architecture</text>
+
+  <rect x="20" y="60" width="300" height="450" rx="10" fill="#eff6ff" stroke="#4285f4" stroke-width="1.5"/>
+  <text x="170" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="#1e40af">USER'S BROWSER (Chrome)</text>
+
+  <rect x="40" y="105" width="260" height="60" rx="6" fill="#fff" stroke="#94a3b8"/>
+  <text x="170" y="125" text-anchor="middle" font-weight="600" fill="#1a1a1a">AI Tool Tab</text>
+  <text x="170" y="145" text-anchor="middle" fill="#475569" font-size="11">chat.openai.com · claude.ai · gemini · copilot</text>
+  <text x="170" y="158" text-anchor="middle" fill="#94a3b8" font-size="10">[textarea / contenteditable]</text>
+
+  <rect x="40" y="180" width="260" height="80" rx="6" fill="#dbeafe" stroke="#4285f4"/>
+  <text x="170" y="200" text-anchor="middle" font-weight="700" fill="#1e3a8a">Content Script (MV3)</text>
+  <text x="170" y="218" text-anchor="middle" fill="#1e40af" font-size="11">Paste interception · DOM observer</text>
+  <text x="170" y="234" text-anchor="middle" fill="#1e40af" font-size="11">Regex scan · Rules · Token map</text>
+  <text x="170" y="250" text-anchor="middle" fill="#1e40af" font-size="11">Mask / Highlight / Warn overlay</text>
+
+  <rect x="40" y="275" width="125" height="55" rx="6" fill="#dbeafe" stroke="#4285f4"/>
+  <text x="102" y="295" text-anchor="middle" font-weight="700" fill="#1e3a8a" font-size="12">Background SW</text>
+  <text x="102" y="312" text-anchor="middle" fill="#1e40af" font-size="10">State · Routing</text>
+  <text x="102" y="324" text-anchor="middle" fill="#1e40af" font-size="10">Audit dispatcher</text>
+
+  <rect x="175" y="275" width="125" height="55" rx="6" fill="#dbeafe" stroke="#4285f4"/>
+  <text x="237" y="295" text-anchor="middle" font-weight="700" fill="#1e3a8a" font-size="12">Popup UI</text>
+  <text x="237" y="312" text-anchor="middle" fill="#1e40af" font-size="10">Mode switcher</text>
+  <text x="237" y="324" text-anchor="middle" fill="#1e40af" font-size="10">Pause toggle</text>
+
+  <rect x="40" y="345" width="260" height="50" rx="6" fill="#fff" stroke="#94a3b8" stroke-dasharray="3,3"/>
+  <text x="170" y="365" text-anchor="middle" font-weight="600" fill="#475569" font-size="12">chrome.storage.local</text>
+  <text x="170" y="382" text-anchor="middle" fill="#64748b" font-size="10">mode · rules · sessionId · tokenMap</text>
+
+  <rect x="100" y="425" width="140" height="45" rx="22" fill="#fff" stroke="#1e40af" stroke-width="1.5"/>
+  <text x="170" y="453" text-anchor="middle" font-weight="600" fill="#1e3a8a">End User</text>
+
+  <line x1="320" y1="215" x2="385" y2="215" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="352" y="207" text-anchor="middle" font-size="10" fill="#374151">masked text</text>
+
+  <line x1="320" y1="305" x2="385" y2="305" stroke="#3ECF8E" stroke-width="1.5" marker-end="url(#arrG)"/>
+  <text x="352" y="297" text-anchor="middle" font-size="10" fill="#15803d">audit events</text>
+
+  <rect x="385" y="170" width="180" height="90" rx="10" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="475" y="195" text-anchor="middle" font-weight="700" fill="#78350f" font-size="13">AI PROVIDERS</text>
+  <text x="475" y="217" text-anchor="middle" fill="#92400e" font-size="11">OpenAI · Anthropic</text>
+  <text x="475" y="233" text-anchor="middle" fill="#92400e" font-size="11">Google · Microsoft</text>
+  <text x="475" y="251" text-anchor="middle" fill="#b45309" font-size="10">(see only masked tokens)</text>
+
+  <rect x="385" y="280" width="180" height="200" rx="10" fill="#dcfce7" stroke="#3ECF8E" stroke-width="1.5"/>
+  <text x="475" y="305" text-anchor="middle" font-weight="700" fill="#14532d" font-size="13">SUPABASE</text>
+  <text x="475" y="318" text-anchor="middle" fill="#15803d" font-size="10">Postgres + Auth + RLS</text>
+
+  <rect x="400" y="330" width="150" height="32" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="475" y="350" text-anchor="middle" fill="#166534" font-size="11">audit_events</text>
+
+  <rect x="400" y="368" width="150" height="32" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="475" y="388" text-anchor="middle" fill="#166534" font-size="11">rules · policies</text>
+
+  <rect x="400" y="406" width="150" height="32" rx="4" fill="#fff" stroke="#22c55e"/>
+  <text x="475" y="426" text-anchor="middle" fill="#166534" font-size="11">organisations · users</text>
+
+  <text x="475" y="460" text-anchor="middle" fill="#15803d" font-size="10">append-only · metadata only</text>
+
+  <line x1="565" y1="380" x2="630" y2="380" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="597" y="372" text-anchor="middle" font-size="10" fill="#374151">read</text>
+  <line x1="630" y1="395" x2="565" y2="395" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="597" y="412" text-anchor="middle" font-size="10" fill="#374151">write rules</text>
+
+  <rect x="630" y="60" width="290" height="450" rx="10" fill="#ecfdf5" stroke="#0f6e56" stroke-width="1.5"/>
+  <text x="775" y="85" text-anchor="middle" font-size="13" font-weight="700" fill="#064e3b">ADMIN DASHBOARD (Next.js)</text>
+
+  <rect x="650" y="105" width="250" height="55" rx="6" fill="#fff" stroke="#10b981"/>
+  <text x="775" y="125" text-anchor="middle" font-weight="700" fill="#064e3b" font-size="12">/dashboard</text>
+  <text x="775" y="142" text-anchor="middle" fill="#065f46" font-size="11">Analytics · KPIs · trends</text>
+
+  <rect x="650" y="170" width="250" height="55" rx="6" fill="#fff" stroke="#10b981"/>
+  <text x="775" y="190" text-anchor="middle" font-weight="700" fill="#064e3b" font-size="12">/audit</text>
+  <text x="775" y="207" text-anchor="middle" fill="#065f46" font-size="11">Event search · drill-down</text>
+
+  <rect x="650" y="235" width="250" height="55" rx="6" fill="#fff" stroke="#10b981"/>
+  <text x="775" y="255" text-anchor="middle" font-weight="700" fill="#064e3b" font-size="12">/rules</text>
+  <text x="775" y="272" text-anchor="middle" fill="#065f46" font-size="11">CRUD rules · priority order</text>
+
+  <rect x="650" y="300" width="250" height="55" rx="6" fill="#fff" stroke="#10b981"/>
+  <text x="775" y="320" text-anchor="middle" font-weight="700" fill="#064e3b" font-size="12">/shield</text>
+  <text x="775" y="337" text-anchor="middle" fill="#065f46" font-size="11">Live demo · pattern testing</text>
+
+  <rect x="650" y="365" width="250" height="55" rx="6" fill="#fff" stroke="#10b981"/>
+  <text x="775" y="385" text-anchor="middle" font-weight="700" fill="#064e3b" font-size="12">/settings</text>
+  <text x="775" y="402" text-anchor="middle" fill="#065f46" font-size="11">Org config · API keys</text>
+
+  <rect x="690" y="445" width="170" height="45" rx="22" fill="#fff" stroke="#064e3b" stroke-width="1.5"/>
+  <text x="775" y="473" text-anchor="middle" font-weight="600" fill="#064e3b">Security Admin</text>
+</svg>

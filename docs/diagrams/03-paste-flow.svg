@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" width="940" height="560" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12">
+  <defs>
+    <marker id="arrS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1e3a8a"/>
+    </marker>
+  </defs>
+
+  <rect width="940" height="560" fill="#ffffff"/>
+
+  <text x="470" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1a1a1a">Paste → Detect → Mask Flow</text>
+
+  <g font-size="11" font-weight="700" fill="#1a1a1a" text-anchor="middle">
+    <rect x="30" y="55" width="120" height="32" rx="5" fill="#fff" stroke="#475569"/>
+    <text x="90" y="76">User</text>
+
+    <rect x="180" y="55" width="120" height="32" rx="5" fill="#dbeafe" stroke="#4285f4"/>
+    <text x="240" y="76">Textarea (DOM)</text>
+
+    <rect x="330" y="55" width="140" height="32" rx="5" fill="#dbeafe" stroke="#4285f4"/>
+    <text x="400" y="76">content-script.js</text>
+
+    <rect x="500" y="55" width="130" height="32" rx="5" fill="#eff6ff" stroke="#60a5fa"/>
+    <text x="565" y="76">engine.js</text>
+
+    <rect x="660" y="55" width="120" height="32" rx="5" fill="#f5f3ff" stroke="#a855f7"/>
+    <text x="720" y="76">Mode handler</text>
+
+    <rect x="810" y="55" width="110" height="32" rx="5" fill="#fef3c7" stroke="#f59e0b"/>
+    <text x="865" y="76">AI provider</text>
+  </g>
+
+  <line x1="90"  y1="87" x2="90"  y2="540" stroke="#cbd5e1" stroke-dasharray="3,3"/>
+  <line x1="240" y1="87" x2="240" y2="540" stroke="#cbd5e1" stroke-dasharray="3,3"/>
+  <line x1="400" y1="87" x2="400" y2="540" stroke="#cbd5e1" stroke-dasharray="3,3"/>
+  <line x1="565" y1="87" x2="565" y2="540" stroke="#cbd5e1" stroke-dasharray="3,3"/>
+  <line x1="720" y1="87" x2="720" y2="540" stroke="#cbd5e1" stroke-dasharray="3,3"/>
+  <line x1="865" y1="87" x2="865" y2="540" stroke="#cbd5e1" stroke-dasharray="3,3"/>
+
+  <line x1="90"  y1="115" x2="236" y2="115" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="163" y="108" text-anchor="middle" fill="#1e3a8a">Cmd+V paste</text>
+
+  <line x1="240" y1="150" x2="396" y2="150" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="318" y="143" text-anchor="middle" fill="#1e3a8a">paste event (preventDefault)</text>
+
+  <line x1="400" y1="185" x2="561" y2="185" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="480" y="178" text-anchor="middle" fill="#1e3a8a">regexScan(text)</text>
+
+  <line x1="565" y1="220" x2="404" y2="220" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="484" y="213" text-anchor="middle" fill="#1e3a8a">Detection[]</text>
+
+  <line x1="400" y1="255" x2="561" y2="255" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="480" y="248" text-anchor="middle" fill="#1e3a8a">applyRules(text, dets, rules)</text>
+
+  <line x1="565" y1="290" x2="404" y2="290" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="484" y="283" text-anchor="middle" fill="#1e3a8a">merged Detection[]</text>
+
+  <rect x="350" y="305" width="100" height="28" rx="14" fill="#fff" stroke="#475569"/>
+  <text x="400" y="324" text-anchor="middle" font-size="11" fill="#475569">if length===0?</text>
+
+  <line x1="400" y1="340" x2="864" y2="340" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arrS)"/>
+  <text x="630" y="333" text-anchor="middle" fill="#16a34a">no detections → allow paste through</text>
+
+  <line x1="400" y1="375" x2="716" y2="375" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="558" y="368" text-anchor="middle" fill="#1e3a8a">handle{Shadow|Fix|Warn}Mode(...)</text>
+
+  <line x1="720" y1="410" x2="568" y2="410" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="644" y="403" text-anchor="middle" fill="#1e3a8a">buildMasked(text, dets)</text>
+
+  <line x1="565" y1="445" x2="724" y2="445" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="644" y="438" text-anchor="middle" fill="#1e3a8a">{ masked, tokenMap }</text>
+
+  <line x1="720" y1="478" x2="244" y2="478" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="482" y="471" text-anchor="middle" fill="#1e3a8a">insertText(element, masked)</text>
+
+  <line x1="240" y1="513" x2="861" y2="513" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrS)"/>
+  <text x="550" y="506" text-anchor="middle" fill="#1e3a8a">user hits Send → masked text leaves browser</text>
+</svg>
