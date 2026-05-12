@@ -1,9 +1,20 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeBootstrap } from '@/components/ThemeBootstrap';
+import { Sidebar } from '@/components/Sidebar';
+import { BackgroundFX } from '@/components/BackgroundFX';
 
 export const metadata: Metadata = {
     title: 'PromptShield Dashboard',
     description: 'Enterprise data loss prevention for AI tools',
+    icons: {
+        icon: [
+            { url: '/promptshield-icon.png', type: 'image/png' },
+        ],
+        shortcut: '/promptshield-icon.png',
+        apple: '/promptshield-icon.png',
+    },
 };
 
 export default function RootLayout({
@@ -12,29 +23,24 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en">
+        <html lang="en" data-theme="futuristic" suppressHydrationWarning>
+            <head>
+                <ThemeBootstrap />
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+                <link
+                    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+                    rel="stylesheet"
+                />
+            </head>
             <body>
-                <div className="dashboard-container">
-                    <nav className="sidebar">
-                        <div className="sidebar-header">
-                            <div className="logo">🛡️</div>
-                            <h1>PromptShield</h1>
-                        </div>
-
-                        <ul className="nav-menu">
-                            <li><a href="/shield">Shield Demo</a></li>
-                            <li><a href="/scanner">File Scanner</a></li>
-                            <li><a href="/rules">Custom Rules</a></li>
-                            <li><a href="/audit">Audit Log</a></li>
-                            <li><a href="/dashboard">Analytics</a></li>
-                            <li><a href="/settings">Settings</a></li>
-                        </ul>
-                    </nav>
-
-                    <main className="main-content">
-                        {children}
-                    </main>
-                </div>
+                <ThemeProvider>
+                    <BackgroundFX />
+                    <div className="dashboard-container">
+                        <Sidebar />
+                        <main className="main-content">{children}</main>
+                    </div>
+                </ThemeProvider>
             </body>
         </html>
     );

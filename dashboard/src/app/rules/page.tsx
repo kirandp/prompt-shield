@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Plus, Pencil, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured, fetchOrgRules, createOrgRule, updateOrgRule, deleteOrgRule, subscribeToRules, getDemoOrgId } from '@/lib/supabase';
 
 export default function RulesPage() {
@@ -172,8 +174,9 @@ export default function RulesPage() {
                     <h2>Custom Rules</h2>
                     <p>Define organization-wide masking rules {!isSupabaseConfigured && '(Demo Mode)'}</p>
                 </div>
-                <button className="btn btn-primary" onClick={handleAddRule}>
-                    + Add Rule
+                <button className="btn btn-primary" onClick={handleAddRule} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <Plus size={16} />
+                    Add Rule
                 </button>
             </div>
 
@@ -203,8 +206,12 @@ export default function RulesPage() {
                                             checked={rule.enabled}
                                             onChange={() => handleToggleRule(rule.id)}
                                         />
-                                        <button className="btn-icon" onClick={() => handleEditRule(rule)}>✎</button>
-                                        <button className="btn-icon" onClick={() => handleDeleteRule(rule.id)}>✕</button>
+                                        <button className="btn-icon" onClick={() => handleEditRule(rule)} aria-label="Edit rule">
+                                            <Pencil size={14} />
+                                        </button>
+                                        <button className="btn-icon" onClick={() => handleDeleteRule(rule.id)} aria-label="Delete rule">
+                                            <X size={14} />
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -213,10 +220,25 @@ export default function RulesPage() {
                 </div>
             </div>
 
-            {showForm && (
-                <div className="modal-overlay" onClick={() => setShowForm(false)}>
-                    <div className="modal" onClick={(e) => e.stopPropagation()}>
-                        <h3>{editingRule ? 'Edit Rule' : 'Add New Rule'}</h3>
+            <AnimatePresence>
+                {showForm && (
+                    <motion.div
+                        className="modal-overlay"
+                        onClick={() => setShowForm(false)}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                    >
+                        <motion.div
+                            className="modal"
+                            onClick={(e) => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.94, y: 12 }}
+                            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            <h3>{editingRule ? 'Edit Rule' : 'Add New Rule'}</h3>
                         <form onSubmit={handleSubmit}>
                             <div className="form-group">
                                 <label>Rule Name *</label>
@@ -273,9 +295,10 @@ export default function RulesPage() {
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <style jsx>{`
         .page {
