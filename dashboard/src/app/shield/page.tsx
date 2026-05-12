@@ -215,6 +215,7 @@ export default function ShieldPage() {
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [showRaw, setShowRaw] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
 
   const [sessionId] = useState(
     () => `shield_${Math.random().toString(36).slice(2, 10)}`
@@ -303,27 +304,6 @@ export default function ShieldPage() {
     setSendError(null);
   };
 
-  const handleBlock = () => {
-    if (detections.length > 0) {
-      void insertAuditEvent({
-        event_type: 'blocked',
-        mode,
-        action_taken: 'blocked',
-        session_id: sessionId,
-        ...summarizeDetections(detections),
-      });
-    }
-
-    setSampleInput('');
-    setDetections([]);
-    setHighlighted('');
-    setMasked('');
-    setTokenMap(null);
-    setResponse(null);
-    setResponseRaw(null);
-    setSendError(null);
-  };
-
   const handleReportIncident = () => {
     if (detections.length > 0) {
       void insertAuditEvent({
@@ -343,6 +323,9 @@ export default function ShieldPage() {
     setResponse(null);
     setResponseRaw(null);
     setSendError(null);
+    setReportSuccess(true);
+
+    setTimeout(() => setReportSuccess(false), 4000);
   };
 
   return (
@@ -464,6 +447,12 @@ export default function ShieldPage() {
           </button>
         </div>
 
+        {reportSuccess && (
+          <div className="section success-banner">
+            <p>✅ Incident reported successfully. Check the Audit Log page to see the report.</p>
+          </div>
+        )}
+
         {/* Results */}
         {detections.length > 0 && (
           <>
@@ -492,8 +481,74 @@ export default function ShieldPage() {
 
             {/* Masked Preview */}
             <div className="section">
-              <h3>What AI Would Receive (Masked)</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <h3 style={{ margin: 0 }}>What AI Would Receive (Masked)</h3>
+                <InfoIcon label="Why masking matters">
+                  Masking replaces sensitive data with placeholder tokens before sending to the AI. This ensures:
+                  <ul style={{ margin: '8px 0', paddingLeft: '16px' }}>
+                    <li><strong>Zero Trust</strong> — Sensitive data never leaves your system</li>
+                    <li><strong>Privacy First</strong> — LLM provider cannot see PHI, PII, secrets</li>
+                    <li><strong>Seamless Experience</strong> — You see natural text, not tokens</li>
+                  </ul>
+                </InfoIcon>
+              </div>
               <div className="preview masked">{masked}</div>
+            </div>
+
+            {/* Token Mapping Reference */}
+            {tokenMap && tokenMap.size > 0 && (
+              <div className="section token-mapping">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <h3 style={{ margin: 0 }}>🔐 Token Mapping Reference</h3>
+                  <InfoIcon label="Seamless Re-hydration (Bi-Directional Masking)">
+                    <strong>How it works:</strong>
+                    <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
+                      <li>Your original values (names, emails, SSNs) are detected and highlighted</li>
+                      <li>They're replaced with tokens like [PERSON_1], [EMAIL_1] before sending to the AI</li>
+                      <li>The AI receives only tokens—your sensitive data never leaves your browser</li>
+                      <li>When the AI responds with "The report for [PERSON_1] is...", we replace [PERSON_1] with the original value</li>
+                      <li>You see natural, readable text on your screen—zero friction, full security</li>
+                    </ol>
+                    <strong>Security Benefit:</strong> The LLM provider sees no sensitive data, but you experience seamless, natural conversation.
+                  </InfoIcon>
+                </div>
+                <p className="token-explanation">
+                  The AI sees tokens, but your original values are safe in the browser. When the AI responds, tokens are automatically replaced back to the original values.
+                </p>
+                <table className="token-table">
+                  <thead>
+                    <tr>
+                      <th>Token (AI sees this)</th>
+                      <th>Original Value (kept local)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from(tokenMap.entries()).map(([original, token]) => (
+                      <tr key={token}>
+                        <td><code>{token}</code></td>
+                        <td className="original-value">{original}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Report Incident — prominent action available right after scan */}
+            <div className="section report-incident-section">
+              <div className="report-incident-row">
+                <div className="report-incident-copy">
+                  <h3 style={{ margin: 0 }}>🚨 Suspicious or malicious prompt?</h3>
+                  <p>Log this prompt and its detections to the audit trail for review.</p>
+                </div>
+                <button
+                  className="btn btn-warning"
+                  onClick={handleReportIncident}
+                  disabled={isSending || detections.length === 0}
+                >
+                  🚨 Report Incident
+                </button>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -525,20 +580,6 @@ export default function ShieldPage() {
                 >
                   ✏️ Edit Manually
                 </button>
-                <button
-                  className="btn btn-warning"
-                  onClick={handleReportIncident}
-                  disabled={isSending || detections.length === 0}
-                >
-                  🚨 Report Incident
-                </button>
-                <button
-                  className="btn btn-danger"
-                  onClick={handleBlock}
-                  disabled={isSending}
-                >
-                  🚫 Block
-                </button>
               </div>
             </div>
 
@@ -553,23 +594,28 @@ export default function ShieldPage() {
             {response !== null && (
               <div className="section">
                 <div className="response-header">
-                  <h3>AI Response (de-anonymized)</h3>
+                  <h3>✨ AI Response (Seamlessly Re-hydrated)</h3>
                   <label className="toggle-raw">
                     <input
                       type="checkbox"
                       checked={showRaw}
                       onChange={(e) => setShowRaw(e.target.checked)}
                     />
-                    <span>Show raw (with tokens)</span>
+                    <span>{showRaw ? 'Show original' : 'Show with tokens'}</span>
                   </label>
                 </div>
                 <div className="preview response">
                   {showRaw ? responseRaw : response}
                 </div>
-                <p className="response-note">
-                  Tokens like <code>[PHI_1]</code> were replaced back to your original values
-                  client-side after the AI replied. The AI never saw the raw data.
-                </p>
+                <div className="rehydration-note">
+                  <strong>🔐 Seamless Re-hydration in Action:</strong>
+                  <ul>
+                    <li>You see natural, readable text (de-anonymized)</li>
+                    <li>The AI only saw masked tokens: {tokenMap && tokenMap.size > 0 ? Array.from(tokenMap.values()).join(', ') : 'none'}</li>
+                    <li>Replacement happened locally in your browser — zero data shared</li>
+                    <li>Toggle "Show with tokens" to see what the AI actually received back</li>
+                  </ul>
+                </div>
               </div>
             )}
           </>
@@ -608,6 +654,43 @@ export default function ShieldPage() {
           border: 1px solid #e0e0e0;
           border-radius: 8px;
           padding: 20px;
+        }
+
+        .section.success-banner {
+          background: #e8f5e9;
+          border: 1px solid #81c784;
+          color: #2e7d32;
+        }
+
+        .section.report-incident-section {
+          background: #fff8e1;
+          border: 1px solid #ffcc80;
+        }
+
+        .report-incident-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+        }
+
+        .report-incident-copy h3 {
+          font-size: 15px;
+          margin: 0 0 4px;
+          color: #e65100;
+        }
+
+        .report-incident-copy p {
+          margin: 0;
+          font-size: 13px;
+          color: #6d4c00;
+        }
+
+        .section.success-banner p {
+          margin: 0;
+          font-weight: 500;
+          font-size: 14px;
         }
 
         .section h3 {
@@ -891,6 +974,83 @@ export default function ShieldPage() {
           padding: 1px 6px;
           border-radius: 3px;
           font-size: 11px;
+        }
+
+        .rehydration-note {
+          margin-top: 16px;
+          padding: 12px 16px;
+          background: #f0f7ff;
+          border-left: 3px solid #4285f4;
+          border-radius: 4px;
+          font-size: 13px;
+          color: #1a73e8;
+        }
+
+        .rehydration-note strong {
+          display: block;
+          margin-bottom: 8px;
+          color: #1565c0;
+        }
+
+        .rehydration-note ul {
+          margin: 0;
+          padding-left: 20px;
+        }
+
+        .rehydration-note li {
+          margin: 6px 0;
+          line-height: 1.4;
+        }
+
+        .token-mapping {
+          background: #f9fdf9;
+          border: 1px solid #c8e6c9;
+        }
+
+        .token-explanation {
+          font-size: 13px;
+          color: #2e7d32;
+          margin: 0 0 12px 0;
+          padding: 8px 12px;
+          background: #e8f5e9;
+          border-radius: 4px;
+        }
+
+        .token-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 13px;
+        }
+
+        .token-table thead {
+          background: #c8e6c9;
+          font-weight: 600;
+        }
+
+        .token-table th,
+        .token-table td {
+          padding: 10px 12px;
+          text-align: left;
+          border-bottom: 1px solid #e0e0e0;
+        }
+
+        .token-table tbody tr:hover {
+          background: #f1f8f6;
+        }
+
+        .token-table code {
+          background: #e8f5e9;
+          padding: 3px 8px;
+          border-radius: 3px;
+          font-size: 12px;
+          font-weight: 600;
+          color: #1b5e20;
+          family: monospace;
+        }
+
+        .token-table .original-value {
+          color: #2e7d32;
+          font-weight: 500;
         }
 
         .error-box {
