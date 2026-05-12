@@ -1,6 +1,8 @@
 /* PromptShield Dashboard Global Styles */
 
-:root {
+/* LEGACY THEME (Default) */
+:root,
+.theme-legacy {
     --color-primary: #4285f4;
     --color-success: #0f6e56;
     --color-danger: #ea4335;
@@ -15,6 +17,23 @@
     --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* NEO-CYBER THEME */
+.theme-neo {
+    --color-primary: #2dd4bf;
+    --color-success: #10b981;
+    --color-danger: #ef4444;
+    --color-warning: #f59e0b;
+    --color-background: rgba(30, 41, 59, 0.7);
+    --color-surface: rgba(15, 23, 42, 0.5);
+    --color-border: rgba(255, 255, 255, 0.05);
+    --color-text-primary: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+    --color-text-tertiary: #94a3b8;
+    --border-radius: 8px;
+    --box-shadow: 0 0 20px rgba(45, 212, 191, 0.1);
+    --glass-effect: backdrop-filter blur(12px);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -23,11 +42,17 @@
 
 html,
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-family: 'Inter', 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     color: var(--color-text-primary);
     background: #fafafa;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* NEO-CYBER theme body background */
+.theme-neo body {
+    background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
 }
 
 .dashboard-container {
@@ -422,11 +447,30 @@ tbody tr:hover {
     letter-spacing: 0.04em;
 }
 
-.severity-safe { background: #e6f4ea; color: #137333; }
-.severity-critical { background: #ffebee; color: #c62828; }
-.severity-high { background: #fff3e0; color: #e65100; }
-.severity-medium { background: #e8f0fe; color: #1a73e8; }
-.severity-low { background: #e6f4ea; color: #137333; }
+.severity-safe {
+    background: #e6f4ea;
+    color: #137333;
+}
+
+.severity-critical {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.severity-high {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.severity-medium {
+    background: #e8f0fe;
+    color: #1a73e8;
+}
+
+.severity-low {
+    background: #e6f4ea;
+    color: #137333;
+}
 
 /* Shared category badges */
 .badge {
@@ -594,7 +638,7 @@ tbody tr:hover {
 }
 
 .info-icon-wrapper:hover .info-tooltip,
-.info-icon:focus-visible + .info-tooltip {
+.info-icon:focus-visible+.info-tooltip {
     opacity: 1;
     transform: translateY(0);
 }
@@ -696,4 +740,289 @@ tbody tr:hover {
 
 .fade-in {
     animation: fadeIn 0.3s ease-out;
+}
+
+/* ====== NEO-CYBER THEME ENHANCEMENTS ====== */
+
+/* Glassmorphism cards for Neo-Cyber */
+.theme-neo .card {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.08);
+}
+
+.theme-neo .card:hover {
+    border-color: rgba(45, 212, 191, 0.3);
+    box-shadow: 0 0 30px rgba(45, 212, 191, 0.15);
+}
+
+/* Glassmorphism for sidebar */
+.theme-neo .sidebar {
+    background: rgba(15, 23, 42, 0.8);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+}
+
+/* Main content background for Neo-Cyber */
+.theme-neo .main-content {
+    background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%);
+}
+
+/* Scrollbar styling for Neo-Cyber */
+.theme-neo ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.theme-neo ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.theme-neo ::-webkit-scrollbar-thumb {
+    background: rgba(45, 212, 191, 0.3);
+    border-radius: 4px;
+}
+
+.theme-neo ::-webkit-scrollbar-thumb:hover {
+    background: rgba(45, 212, 191, 0.6);
+}
+
+/* Glow effect on buttons for Neo-Cyber */
+.theme-neo .btn-primary {
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.3);
+    transition: all 0.3s ease;
+}
+
+.theme-neo .btn-primary:hover {
+    box-shadow: 0 0 25px rgba(45, 212, 191, 0.5);
+}
+
+/* Input fields styling for Neo-Cyber */
+.theme-neo input[type='text'],
+.theme-neo input[type='email'],
+.theme-neo input[type='password'],
+.theme-neo input[type='number'],
+.theme-neo input[type='date'],
+.theme-neo select,
+.theme-neo textarea {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    color: var(--color-text-primary);
+}
+
+.theme-neo input[type='text']:focus,
+.theme-neo input[type='email']:focus,
+.theme-neo input[type='password']:focus,
+.theme-neo input[type='number']:focus,
+.theme-neo input[type='date']:focus,
+.theme-neo select:focus,
+.theme-neo textarea:focus {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.3);
+}
+
+/* Table styling for Neo-Cyber */
+.theme-neo table {
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.theme-neo thead {
+    background: rgba(15, 23, 42, 0.7);
+}
+
+.theme-neo tbody tr:hover {
+    background: rgba(45, 212, 191, 0.05);
+}
+
+.theme-neo th {
+    border-bottom-color: rgba(45, 212, 191, 0.2);
+}
+
+.theme-neo td {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Status indicators for Neo-Cyber */
+.theme-neo .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.theme-neo .status-active {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.theme-neo .status-inactive {
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.theme-neo .status-warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.theme-neo .status-critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Compliance status panel */
+.theme-neo .compliance-panel {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 8px;
+    padding: 20px;
+    backdrop-filter: blur(12px);
+}
+
+/* Sanitization flow visualization */
+.theme-neo .sanitization-flow {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 20px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(45, 212, 191, 0.15);
+}
+
+.theme-neo .flow-step {
+    flex: 1;
+    padding: 16px;
+    background: rgba(45, 212, 191, 0.1);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    border-radius: 6px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.theme-neo .flow-step:hover {
+    background: rgba(45, 212, 191, 0.2);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.2);
+}
+
+.theme-neo .flow-arrow {
+    color: var(--color-primary);
+    font-size: 20px;
+    opacity: 0.6;
+}
+
+/* Badge styling for Neo-Cyber */
+.theme-neo .badge {
+    background: rgba(45, 212, 191, 0.15);
+    color: var(--color-primary);
+    border: 1px solid rgba(45, 212, 191, 0.3);
+}
+
+/* Info tooltip for Neo-Cyber */
+.theme-neo .info-tooltip {
+    background: rgba(15, 23, 42, 0.95);
+    color: var(--color-text-primary);
+    border: 1px solid rgba(45, 212, 191, 0.2);
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.2);
+}
+
+.theme-neo .info-tooltip::after {
+    border-top-color: rgba(15, 23, 42, 0.95);
+}
+
+/* Drop zone for Neo-Cyber */
+.theme-neo .drop-zone {
+    border: 2px dashed rgba(45, 212, 191, 0.3);
+    background: rgba(30, 41, 59, 0.5);
+}
+
+.theme-neo .drop-zone:hover,
+.theme-neo .drop-zone:focus-visible {
+    border-color: var(--color-primary);
+    background: rgba(45, 212, 191, 0.08);
+}
+
+.theme-neo .drop-zone-active {
+    border-color: var(--color-primary);
+    background: rgba(45, 212, 191, 0.12);
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.2);
+}
+
+/* Severity badges for Neo-Cyber */
+.theme-neo .severity-safe {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.theme-neo .severity-critical {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.theme-neo .severity-high {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.theme-neo .severity-medium {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.theme-neo .severity-low {
+    background: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Theme toggle button */
+.theme-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+}
+
+.theme-toggle:hover {
+    border-color: var(--color-primary);
+    background: var(--color-surface);
+}
+
+.theme-neo .theme-toggle {
+    border-color: rgba(45, 212, 191, 0.2);
+    background: rgba(30, 41, 59, 0.5);
+    color: var(--color-text-primary);
+}
+
+.theme-neo .theme-toggle:hover {
+    border-color: var(--color-primary);
+    background: rgba(45, 212, 191, 0.1);
+    box-shadow: 0 0 15px rgba(45, 212, 191, 0.2);
 }

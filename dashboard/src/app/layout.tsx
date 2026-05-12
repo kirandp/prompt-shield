@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ThemeProvider } from './providers/ThemeProvider';
+import { ClientSidebar } from './components/ClientSidebar';
 
 export const metadata: Metadata = {
     title: 'PromptShield Dashboard',
@@ -12,29 +14,16 @@ export default function RootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
             <body>
-                <div className="dashboard-container">
-                    <nav className="sidebar">
-                        <div className="sidebar-header">
-                            <div className="logo">🛡️</div>
-                            <h1>PromptShield</h1>
-                        </div>
-
-                        <ul className="nav-menu">
-                            <li><a href="/shield">Shield Demo</a></li>
-                            <li><a href="/scanner">File Scanner</a></li>
-                            <li><a href="/rules">Custom Rules</a></li>
-                            <li><a href="/audit">Audit Log</a></li>
-                            <li><a href="/dashboard">Analytics</a></li>
-                            <li><a href="/settings">Settings</a></li>
-                        </ul>
-                    </nav>
-
-                    <main className="main-content">
-                        {children}
-                    </main>
-                </div>
+                <ThemeProvider>
+                    <div className="dashboard-container">
+                        <ClientSidebar />
+                        <main className="main-content">
+                            {children}
+                        </main>
+                    </div>
+                </ThemeProvider>
             </body>
         </html>
     );
